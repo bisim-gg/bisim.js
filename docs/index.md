@@ -24,7 +24,7 @@ features:
   - title: Change one line
     details: A discord.js v14 bot moves to Bisim by changing require('discord.js') to require('bisim.js') and using a Bisim token.
   - title: Everything a bot needs
-    details: Slash commands with options, subcommands and autocomplete, context menus, buttons, select menus, modals, embeds, collectors and moderation.
+    details: Slash commands with options, subcommands and autocomplete, context menus, buttons, select menus, modals, embeds, collectors, moderation, and voice with @bisim/voice.
   - title: Built for Bisim
     details: Persian and English command names, Bisim's gateway and rate limits handled for you, and a clear error for anything Bisim does not have.
   - title: Typed and tested

@@ -4,6 +4,29 @@ All notable changes to bisim.js are listed here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [0.2.0] - 2026-11-14
+
+Voice: a bot joins voice channels with the new package [@bisim/voice](https://github.com/bisim-gg/voice), the
+counterpart of `@discordjs/voice`.
+
+### Added
+
+- `guild.voiceAdapterCreator`, the adapter @bisim/voice's `joinVoiceChannel` takes as `adapterCreator`, as in
+  discord.js. It joins, leaves and changes the bot's own mute and deafen over Bisim's API, follows a moderator's
+  move of the bot (`VOICE_MOVE`), and passes on the bot's own voice state.
+- `client.voice` (`ClientVoiceManager`) with the adapters of every server; they end with `client.destroy()` and
+  when the bot leaves a server.
+- `VoiceChannel.sendSoundboardSound()` plays one of the server's soundboard sounds while the bot is connected.
+- The `voiceServerUpdate` event, with `{ guildId, endpoint, token }`.
+- `Routes.channelVoiceJoin`, `channelVoiceLeave`, `channelVoiceSelfState` and `sendSoundboardSound`.
+
+### Changed
+
+- `VoiceChannel.joinable` and `speakable` follow the bot's permissions (Connect and Speak, and a timeout) instead
+  of always being `false`.
+- Server mute, deafen, move and disconnect on the bot's own voice state no longer throw; Bisim checks the
+  permissions as for anyone else.
+
 ## [0.1.0] - 2026-11-14
 
 The first release: the core of a discord.js v14 style library for Bisim.

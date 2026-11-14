@@ -22,8 +22,8 @@ Underneath, bisim.js talks to Bisim's own REST API and gateway. Bisim uses its o
 ids as strings) but Discord's numbers for types, flags and permission bits, so bisim.js can turn every Bisim
 object into the discord.js object you expect: a `Message`, a `GuildMember`, a `ChatInputCommandInteraction`.
 
-Some things exist on Discord but not on Bisim, such as threads, stage channels and voice connections for
-bots. bisim.js never ignores them silently: calling them throws a `BisimjsError` that says the feature is not
+Some things exist on Discord but not on Bisim, such as threads, stage channels and scheduled events.
+bisim.js never ignores them silently: calling them throws a `BisimjsError` that says the feature is not
 supported on Bisim. The [Moving from discord.js](./moving-from-discord-js.md) page lists all of them.
 
 ## How this guide is laid out
@@ -35,6 +35,7 @@ supported on Bisim. The [Moving from discord.js](./moving-from-discord-js.md) pa
   over HTTP.
 - **Topics** explains events, embeds, messages, members and roles, collectors and how the gateway works on
   Bisim.
+- **Voice** joins voice channels with @bisim/voice, plays audio and receives what others say.
 
 Every code sample is plain JavaScript (CommonJS). bisim.js ships its own types, so the same code works in
 TypeScript, and `import` works as well as `require`.

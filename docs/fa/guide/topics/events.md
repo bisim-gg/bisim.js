@@ -69,6 +69,7 @@ for (const file of fs.readdirSync(eventsDir).filter((name) => name.endsWith('.js
 | `PresenceUpdate` | `oldPresence`، `newPresence` |
 | `TypingStart` | `typing` |
 | `VoiceStateUpdate` | `oldState`، `newState` |
+| `VoiceServerUpdate` | `data` (ورود ربات به کانال صوتی، از @bisim/voice) |
 | `UserUpdate` | `oldUser`، `newUser` |
 | `ShardReady`، `ShardResume`، `ShardReconnecting`، `ShardDisconnect`، `ShardError` | چرخهٔ عمر اتصال |
 | `Debug`، `Warn`، `Error`، `Raw` | عیب‌یابی |

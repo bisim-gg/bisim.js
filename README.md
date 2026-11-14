@@ -56,6 +56,8 @@ discord.js guide, a bot with buttons and a select menu, and a prefix command bot
   modals, collectors and receiving interactions over HTTP.
 - **API reference:** [every class, method and event](https://bisim-gg.github.io/bisim.js/api/index.html).
 - **Moving from discord.js:** [what changes, what Bisim does not have, and what throws](https://bisim-gg.github.io/bisim.js/guide/moving-from-discord-js.html).
+- **Voice:** [joining voice channels, playing and receiving audio](https://bisim-gg.github.io/bisim.js/guide/voice/)
+  with [@bisim/voice](https://github.com/bisim-gg/voice).
 - **Bisim developer docs:** [docs.bisim.gg](https://docs.bisim.gg), for webhooks, bots and the HTTP API
   underneath this library.
 
@@ -68,7 +70,9 @@ Most bots run unchanged. The short version:
 - **Names.** Only the word "Discord" changes: `DiscordAPIError` is `BisimAPIError`, `DiscordjsError` is
   `BisimjsError`, `discordSort` is `bisimSort`.
 - **Intents** are accepted and ignored. A bot receives what its permissions let it see.
-- **Not on Bisim:** voice connections for bots, threads, stage and forum channels, scheduled events,
+- **Voice** is the package [`@bisim/voice`](https://www.npmjs.com/package/@bisim/voice), in place of
+  `@discordjs/voice`, with the same API: `adapterCreator: guild.voiceAdapterCreator` works as before.
+- **Not on Bisim:** threads, stage and forum channels, scheduled events,
   sharding, sticker packs, per command permissions. Calling these throws a `BisimjsError` that says so;
   nothing fails silently.
 

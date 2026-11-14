@@ -16,6 +16,8 @@ function normalizeBase(raw: string | undefined): string {
 
 const base = normalizeBase(process.env.DOCS_BASE);
 const repo = 'https://github.com/bisim-gg/bisim.js';
+/** The typed reference of @bisim/voice, built from its own repository. */
+const voiceApi = 'https://bisim-gg.github.io/voice/';
 
 function sidebarEn(): DefaultTheme.SidebarItem[] {
   return [
@@ -59,6 +61,16 @@ function sidebarEn(): DefaultTheme.SidebarItem[] {
         { text: 'Members and roles', link: '/guide/topics/members-and-roles' },
         { text: 'Collectors', link: '/guide/topics/collectors' },
         { text: 'The gateway and intents', link: '/guide/topics/gateway' },
+      ],
+    },
+    {
+      text: 'Voice',
+      items: [
+        { text: 'Voice with @bisim/voice', link: '/guide/voice/' },
+        { text: 'Voice connections', link: '/guide/voice/connections' },
+        { text: 'Playing audio', link: '/guide/voice/audio-player' },
+        { text: 'Receiving audio', link: '/guide/voice/receiving' },
+        { text: '@bisim/voice API reference', link: voiceApi },
       ],
     },
     {
@@ -114,6 +126,16 @@ function sidebarFa(): DefaultTheme.SidebarItem[] {
         { text: 'اعضا و نقش‌ها', link: '/fa/guide/topics/members-and-roles' },
         { text: 'جمع‌کننده‌ها', link: '/fa/guide/topics/collectors' },
         { text: 'گیت‌وی و اینتنت‌ها', link: '/fa/guide/topics/gateway' },
+      ],
+    },
+    {
+      text: 'صدا',
+      items: [
+        { text: 'صدا با @bisim/voice', link: '/fa/guide/voice/' },
+        { text: 'اتصال صوتی', link: '/fa/guide/voice/connections' },
+        { text: 'پخش صدا', link: '/fa/guide/voice/audio-player' },
+        { text: 'دریافت صدا', link: '/fa/guide/voice/receiving' },
+        { text: 'مرجع API بستهٔ @bisim/voice (انگلیسی)', link: voiceApi },
       ],
     },
     {
@@ -174,10 +196,11 @@ export default defineConfig({
           { text: 'API reference', link: '/api/index.html', target: '_self' },
           { text: 'Moving from discord.js', link: '/guide/moving-from-discord-js' },
           {
-            text: '0.1.0',
+            text: '0.2.0',
             items: [
               { text: 'Changelog', link: `${repo}/blob/main/CHANGELOG.md` },
               { text: 'npm', link: 'https://www.npmjs.com/package/bisim.js' },
+              { text: '@bisim/voice', link: 'https://www.npmjs.com/package/@bisim/voice' },
               { text: 'Bisim developer docs', link: 'https://docs.bisim.gg' },
             ],
           },
@@ -200,10 +223,11 @@ export default defineConfig({
           { text: 'مرجع API', link: '/api/index.html', target: '_self' },
           { text: 'آمدن از discord.js', link: '/fa/guide/moving-from-discord-js' },
           {
-            text: '0.1.0',
+            text: '0.2.0',
             items: [
               { text: 'تغییرات', link: `${repo}/blob/main/CHANGELOG.md` },
               { text: 'npm', link: 'https://www.npmjs.com/package/bisim.js' },
+              { text: '@bisim/voice', link: 'https://www.npmjs.com/package/@bisim/voice' },
               { text: 'مستندات توسعه‌دهندگان بی‌سیم', link: 'https://docs.bisim.gg' },
             ],
           },

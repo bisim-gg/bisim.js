@@ -41,7 +41,6 @@ bisim.js از نزدیک از discord.js نسخهٔ ۱۴ پیروی می‌کن�
 | کانال‌های استیج | `voiceState.setRequestToSpeak()`، `setSuppressed()`، `guild.stageInstances` |
 | کانال‌های انجمن، رسانه و اطلاع‌رسانی | `message.crosspost()`، `guild.channels.addFollower()`، `textChannel.setType()` |
 | رویدادهای زمان‌بندی‌شده | `guild.scheduledEvents` |
-| اتصال صوتی برای ربات‌ها | ورود به کانال صوتی، `member.voice.setChannel()` روی خود ربات |
 | شاردینگ | `ShardingManager` وجود ندارد؛ هر `shards` به‌جز ۰ خطای `ClientInvalidProvidedShards` می‌دهد |
 | دسترسی‌های جداگانهٔ دستورها | `command.permissions`، `commands.permissions.set()` |
 | بستهٔ استیکر، SKU، اشتراک و دکمهٔ پریمیوم | `client.fetchStickerPacks()`، `application.fetchSKUs()`، `ButtonStyle.Premium` |
@@ -75,6 +74,12 @@ bisim.js از نزدیک از discord.js نسخهٔ ۱۴ پیروی می‌کن�
 - **شناسه‌ها (snowflake)** از مبدأ زمانی بی‌سیم حساب می‌شوند، پس `SnowflakeUtil.timestampFrom(id)` برای شناسه‌های
   بی‌سیم تاریخ درست را می‌دهد.
 - **زبان‌ها.** ترجمه‌های دستورها فقط `fa` و انگلیسی را نگه می‌دارند و زبان‌های دیگر کنار گذاشته می‌شوند.
+
+## صدا
+
+صدا مثل دیسکورد بستهٔ جداگانهٔ خودش را دارد: `@bisim/voice` با همان API جای `@discordjs/voice` را می‌گیرد و
+`guild.voiceAdapterCreator` مثل قبل کار می‌کند. ربات فقط صدا می‌فرستد و در هر سرور در یک کانال صوتی می‌نشیند.
+صفحهٔ [صدا](./voice/index.md) را ببینید.
 
 ## امکانات اضافهٔ بی‌سیم
 

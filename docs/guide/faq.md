@@ -86,6 +86,10 @@ try {
 }
 ```
 
+## Can my bot play music or join voice?
+
+Yes, with [@bisim/voice](./voice/index.md), the counterpart of `@discordjs/voice`.
+
 ## Can I run my bot against a local Bisim?
 
 Yes. Point the client at it with `rest.api` and `ws.gateway`:

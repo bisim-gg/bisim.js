@@ -1,6 +1,6 @@
 {
   "name": "bisim.js",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "The official Node.js library for Bisim bots, written the discord.js way",
   "license": "MIT",
   "author": "Bisim",

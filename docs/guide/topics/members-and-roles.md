@@ -91,7 +91,7 @@ const canSpeak = channel.permissionsFor(member).has(PermissionFlagsBits.SendMess
 
 ## Voice
 
-Bots cannot join voice on Bisim, but they can see who is in a voice channel and moderate them:
+A bot sees who is in a voice channel and can moderate them (to join voice itself, see [Voice](../voice/index.md)):
 
 ```js
 const voice = member.voice;

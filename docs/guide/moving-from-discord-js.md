@@ -41,7 +41,6 @@ code is `NotSupported` and whose message names the feature.
 | Stage channels | `voiceState.setRequestToSpeak()`, `setSuppressed()`, `guild.stageInstances` |
 | Forum and media channels, announcement channels | `message.crosspost()`, `guild.channels.addFollower()`, `textChannel.setType()` |
 | Scheduled events | `guild.scheduledEvents` |
-| Voice connections for bots | joining voice, `member.voice.setChannel()` on the bot itself |
 | Sharding | `ShardingManager` does not exist; `shards` other than 0 throw `ClientInvalidProvidedShards` |
 | Command permissions | `command.permissions`, `commands.permissions.set()` |
 | Sticker packs, SKUs, entitlements, premium buttons | `client.fetchStickerPacks()`, `application.fetchSKUs()`, `ButtonStyle.Premium` |
@@ -74,6 +73,12 @@ code is `NotSupported` and whose message names the feature.
   the install link from `generateInvite()` is `https://bisim.gg/oauth2/authorize?...`.
 - **Snowflakes** use Bisim's epoch, so `SnowflakeUtil.timestampFrom(id)` gives the right date for Bisim ids.
 - **Languages.** Command translations keep `fa` and English; other languages are dropped.
+
+## Voice
+
+Voice has its own package, as on Discord: `@bisim/voice` takes the place of `@discordjs/voice`, with the same
+API, and `guild.voiceAdapterCreator` works as before. A bot sends sound only and sits in one voice channel per
+server. See [Voice](./voice/index.md).
 
 ## Bisim extras
 

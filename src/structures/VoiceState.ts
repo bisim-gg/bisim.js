@@ -117,7 +117,6 @@ export class VoiceState extends Base {
 
   private requireChannel(): string {
     if (!this.channelId) throw new BisimjsError(ErrorCodes.GuildVoiceChannelResolve);
-    if (this.id === this.client.user.id) notSupported('Voice for bots');
     return this.channelId;
   }
 

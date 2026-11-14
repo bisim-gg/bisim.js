@@ -1,6 +1,8 @@
 import type { Client } from '../../client/Client.js';
+import { Routes } from '../../rest/Routes.js';
 import type { RawChannelData } from '../../types/raw.js';
 import { Collection } from '../../util/Collection.js';
+import { PermissionFlagsBits } from '../../util/PermissionsBitField.js';
 import { notSupported } from '../../util/Util.js';
 import type { Guild } from '../Guild.js';
 import type { GuildMember } from '../GuildMember.js';
@@ -8,8 +10,18 @@ import type { VoiceState } from '../VoiceState.js';
 import { GuildChannel } from './GuildChannel.js';
 
 /**
- * A voice channel in a server. Bots cannot join voice on Bisim, but they can see who is in it and moderate
- * them (see {@link VoiceState}). Voice channels on Bisim have no text chat.
+ * What {@link VoiceChannel.sendSoundboardSound} takes besides a sound object.
+ */
+export interface SendSoundboardSoundOptions {
+  /** The sound's id. */
+  soundId: string;
+  /** Accepted for compatibility: on Bisim a server plays only its own sounds. */
+  guildId?: string;
+}
+
+/**
+ * A voice channel in a server. A bot joins it with @bisim/voice (`joinVoiceChannel`), sees who is in it and
+ * moderates them (see {@link VoiceState}). Voice channels on Bisim have no text chat.
  */
 export class VoiceChannel extends GuildChannel {
   /** Bisim does not expose a bitrate: always 64000. */
@@ -56,18 +68,45 @@ export class VoiceChannel extends GuildChannel {
     return this.guild.voiceStates.cache.filter((state) => state.channelId === this.id);
   }
 
-  /**
-   * Always `false`: bots cannot join voice on Bisim.
-   */
-  public get joinable(): boolean {
-    return false;
+  private botTimedOut(): boolean {
+    const until = this.guild.members.me?.communicationDisabledUntilTimestamp ?? null;
+    return until !== null && until > Date.now();
   }
 
   /**
-   * Always `false`: bots cannot speak in voice on Bisim.
+   * Whether the bot may join this channel: it sees it and has Connect, and is not timed out.
+   */
+  public get joinable(): boolean {
+    if (!this.viewable) return false;
+    const mine = this.permissionsFor(this.client.user);
+    if (!mine) return false;
+    if (mine.has(PermissionFlagsBits.Administrator, false)) return true;
+    return !this.botTimedOut() && mine.has(PermissionFlagsBits.Connect, false);
+  }
+
+  /**
+   * Whether the bot may send sound in this channel: it has Speak, and is not timed out.
    */
   public get speakable(): boolean {
-    return false;
+    const mine = this.permissionsFor(this.client.user);
+    if (!mine) return false;
+    if (mine.has(PermissionFlagsBits.Administrator, false)) return true;
+    return !this.botTimedOut() && mine.has(PermissionFlagsBits.Speak, false);
+  }
+
+  /**
+   * Plays one of the server's soundboard sounds in this channel, for everyone in it. The bot must be connected to
+   * the channel (with @bisim/voice) and have Speak and Use Soundboard.
+   *
+   * @example
+   * ```js
+   * await channel.sendSoundboardSound({ soundId: '123456789012345678' });
+   * ```
+   * @param sound - The sound, its id, or `{ soundId }`
+   */
+  public async sendSoundboardSound(sound: SendSoundboardSoundOptions | { id: string } | string): Promise<void> {
+    const soundId = typeof sound === 'string' ? sound : 'soundId' in sound ? sound.soundId : sound.id;
+    await this.client.rest.post(Routes.sendSoundboardSound(this.id), { body: { soundId } });
   }
 
   /**

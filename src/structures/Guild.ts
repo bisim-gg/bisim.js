@@ -1,4 +1,5 @@
 import type { Client } from '../client/Client.js';
+import type { InternalBisimGatewayAdapterCreator } from '../client/voice/ClientVoiceManager.js';
 import { BisimjsError, ErrorCodes } from '../errors/index.js';
 import { GuildApplicationCommandManager } from '../managers/ApplicationCommandManager.js';
 import { GuildBanManager } from '../managers/GuildBanManager.js';
@@ -340,6 +341,23 @@ export class Guild extends Base {
    */
   public get verified(): boolean {
     return false;
+  }
+
+  /**
+   * The adapter @bisim/voice uses to join voice in this server: pass it as `adapterCreator`.
+   *
+   * @example
+   * ```js
+   * const { joinVoiceChannel } = require('@bisim/voice');
+   * const connection = joinVoiceChannel({
+   *   channelId: channel.id,
+   *   guildId: guild.id,
+   *   adapterCreator: guild.voiceAdapterCreator,
+   * });
+   * ```
+   */
+  public get voiceAdapterCreator(): InternalBisimGatewayAdapterCreator {
+    return (methods) => this.client.voice._createAdapter(this.id, methods);
   }
 
   /**

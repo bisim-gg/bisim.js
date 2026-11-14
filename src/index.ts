@@ -81,6 +81,7 @@ export * from './managers/ReactionUserManager.js';
 export * from './managers/RoleManager.js';
 export * from './managers/UserManager.js';
 export * from './managers/VoiceStateManager.js';
+export * from './client/voice/ClientVoiceManager.js';
 
 // Structures
 export { Base } from './structures/Base.js';

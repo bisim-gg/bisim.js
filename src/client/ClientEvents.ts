@@ -11,6 +11,7 @@ import type { Role } from '../structures/Role.js';
 import type { Typing } from '../structures/Typing.js';
 import type { User } from '../structures/User.js';
 import type { VoiceState } from '../structures/VoiceState.js';
+import type { VoiceServerUpdateData } from './voice/ClientVoiceManager.js';
 import type { Collection } from '../util/Collection.js';
 import type { ReactionType } from '../util/Enums.js';
 import type { Client } from './Client.js';
@@ -73,5 +74,6 @@ export interface ClientEvents {
   shardResume: [shardId: number, replayedEvents: number];
   typingStart: [typing: Typing];
   userUpdate: [oldUser: User, newUser: User];
+  voiceServerUpdate: [data: VoiceServerUpdateData];
   voiceStateUpdate: [oldState: VoiceState, newState: VoiceState];
 }

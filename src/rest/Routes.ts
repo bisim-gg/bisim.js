@@ -138,6 +138,14 @@ export const Routes = {
   channelVoiceMember: (channelId: Id, userId: Id): RouteLike => `/channels/${channelId}/voice/members/${userId}`,
   /** Bisim: `POST /channels/:id/voice/members/:userId/move` with `{ channelId }`. */
   channelVoiceMemberMove: (channelId: Id, userId: Id): RouteLike => `/channels/${channelId}/voice/members/${userId}/move`,
+  /** Bisim: `POST /channels/:id/voice/join` with `{ selfMuted, selfDeafened }`: the LiveKit address and token. */
+  channelVoiceJoin: (channelId: Id): RouteLike => `/channels/${channelId}/voice/join`,
+  /** Bisim: `POST /channels/:id/voice/leave`. */
+  channelVoiceLeave: (channelId: Id): RouteLike => `/channels/${channelId}/voice/leave`,
+  /** Bisim: `PATCH /channels/:id/voice/state` with `{ selfMuted, selfDeafened }`, while in that channel. */
+  channelVoiceSelfState: (channelId: Id): RouteLike => `/channels/${channelId}/voice/state`,
+  /** `POST`: plays a soundboard sound in the voice channel the bot is in (Bisim: `/channels/:id/soundboard/play`). */
+  sendSoundboardSound: (channelId: Id): RouteLike => `/channels/${channelId}/soundboard/play`,
   /** Bisim: `PUT /channels/:id/messages/:messageId/poll/votes` with `{ answerIds }`. */
   pollVotes: (channelId: Id, messageId: Id): RouteLike => `/channels/${channelId}/messages/${messageId}/poll/votes`,
   /** `GET` the voters of one answer. */

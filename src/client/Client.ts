@@ -29,6 +29,7 @@ import { type GatewayIntentsString, IntentsBitField } from '../util/IntentsBitFi
 import { PermissionsBitField, type PermissionResolvable } from '../util/PermissionsBitField.js';
 import { notSupported } from '../util/Util.js';
 import type { ClientEvents } from './ClientEvents.js';
+import { ClientVoiceManager } from './voice/ClientVoiceManager.js';
 import { attachHidden } from '../util/internal.js';
 
 /**
@@ -238,6 +239,8 @@ export class Client<Ready extends boolean = boolean> extends BaseClient {
   public sweepers: { destroy(): void };
   /** The custom emoji of every server. */
   public readonly emojis: ClientEmojiManager;
+  /** Voice: the adapters @bisim/voice connections use (see `guild.voiceAdapterCreator`). */
+  public readonly voice: ClientVoiceManager;
 
   /**
    * @param options - The options; `intents` is required, as in discord.js
@@ -266,6 +269,7 @@ export class Client<Ready extends boolean = boolean> extends BaseClient {
     this.rest = new REST(rest);
     this.rest.on('restDebug', (message) => this.emit(Events.Debug, `[REST] ${message}`));
     this.emojis = new ClientEmojiManager(this);
+    this.voice = new ClientVoiceManager(this);
     this.user = null as never;
     this.application = null as never;
     this.readyTimestamp = null as never;
@@ -338,6 +342,7 @@ export class Client<Ready extends boolean = boolean> extends BaseClient {
    */
   public async destroy(): Promise<void> {
     const { rest, ws } = this;
+    this.voice._destroyAdapters();
     ws.destroy();
     rest.clearHandlerSweeper();
     this.sweepers.destroy();
@@ -506,6 +511,7 @@ export class Client<Ready extends boolean = boolean> extends BaseClient {
     if (!guild) return;
     for (const channelId of guild.channels.cache.keys()) this.channels.cache.delete(channelId);
     this.guilds.cache.delete(id);
+    this.voice._destroyAdapters(id);
     if (emit) this.emit(Events.GuildDelete, guild);
   }
 

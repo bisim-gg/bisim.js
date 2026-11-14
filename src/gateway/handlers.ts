@@ -418,7 +418,15 @@ export const handlers: Record<string, DispatchHandler> = {
     const existing = guild.voiceStates.cache.get(raw.userId);
     const old = existing ? existing._clone() : new VoiceState(guild, { userId: raw.userId });
     const state = guild.voiceStates._add(raw);
+    if (raw.userId === client.user.id) client.voice._onVoiceState(guild.id, d.channelId ?? null, raw);
     client.emit(Events.VoiceStateUpdate, old, state);
+  },
+
+  VOICE_MOVE(client, d) {
+    const move = d.voiceMove;
+    const guildId = move?.guildId || d.guildId;
+    if (!guildId || !move?.fromChannelId || !move.toChannelId) return;
+    client.voice._onVoiceMove(guildId, move.fromChannelId, move.toChannelId);
   },
 
   USER_UPDATE(client, d) {

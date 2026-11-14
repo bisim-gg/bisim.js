@@ -212,3 +212,12 @@ describe('voice channels', () => {
     ]);
   });
 });
+
+describe('version', () => {
+  it('is the same as package.json', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { version } = await import('../src/index.js');
+    const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string };
+    expect(version).toBe(pkg.version);
+  });
+});

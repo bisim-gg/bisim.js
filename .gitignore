@@ -1,0 +1,15 @@
+node_modules/
+dist/
+coverage/
+docs/api/
+*.log
+*.tgz
+.env
+.env.*
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+docs/public/api/
+docs/.vitepress/dist/
+docs/.vitepress/cache/

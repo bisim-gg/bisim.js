@@ -1,0 +1,367 @@
+{
+ "colors": [
+  [
+   "Default",
+   {
+    "ok": 0
+   }
+  ],
+  [
+   "#ff0000",
+   {
+    "ok": 16711680
+   }
+  ],
+  [
+   "ff0000",
+   {
+    "ok": 16711680
+   }
+  ],
+  [
+   "#ABC",
+   {
+    "ok": 11189196
+   }
+  ],
+  [
+   "abc",
+   {
+    "ok": 11189196
+   }
+  ],
+  [
+   "Blurple",
+   {
+    "ok": 5793266
+   }
+  ],
+  [
+   "Red",
+   {
+    "ok": 15548997
+   }
+  ],
+  [
+   "DarkButNotBlack",
+   {
+    "ok": 2895667
+   }
+  ],
+  [
+   [
+    255,
+    0,
+    0
+   ],
+   {
+    "ok": 16711680
+   }
+  ],
+  [
+   [
+    1,
+    2,
+    3
+   ],
+   {
+    "ok": 66051
+   }
+  ],
+  [
+   1193046,
+   {
+    "ok": 1193046
+   }
+  ],
+  [
+   0,
+   {
+    "ok": 0
+   }
+  ],
+  [
+   16777215,
+   {
+    "ok": 16777215
+   }
+  ],
+  [
+   -1,
+   {
+    "error": "RangeError [ColorRange]",
+    "code": "ColorRange",
+    "message": "Color must be within the range 0 - 16777215 (0xFFFFFF)."
+   }
+  ],
+  [
+   16777216,
+   {
+    "error": "RangeError [ColorRange]",
+    "code": "ColorRange",
+    "message": "Color must be within the range 0 - 16777215 (0xFFFFFF)."
+   }
+  ],
+  [
+   "nope",
+   {
+    "error": "TypeError [ColorConvert]",
+    "code": "ColorConvert",
+    "message": "Unable to convert \"nope\" to a number."
+   }
+  ],
+  [
+   null,
+   {
+    "error": "TypeError [ColorConvert]",
+    "code": "ColorConvert",
+    "message": "Unable to convert \"NaN\" to a number."
+   }
+  ],
+  [
+   "#12345",
+   {
+    "error": "TypeError [ColorConvert]",
+    "code": "ColorConvert",
+    "message": "Unable to convert \"#12345\" to a number."
+   }
+  ],
+  [
+   "#1234567",
+   {
+    "error": "TypeError [ColorConvert]",
+    "code": "ColorConvert",
+    "message": "Unable to convert \"#1234567\" to a number."
+   }
+  ]
+ ],
+ "emojis": [
+  [
+   "😀",
+   {
+    "animated": false,
+    "name": "😀"
+   }
+  ],
+  [
+   "%F0%9F%98%80",
+   {
+    "animated": false,
+    "name": "😀"
+   }
+  ],
+  [
+   "name:123",
+   {
+    "animated": false,
+    "name": "name",
+    "id": "123"
+   }
+  ],
+  [
+   "a:name:123",
+   {
+    "animated": true,
+    "name": "name",
+    "id": "123"
+   }
+  ],
+  [
+   "<:name:123>",
+   {
+    "animated": false,
+    "name": "name",
+    "id": "123"
+   }
+  ],
+  [
+   "<a:name:123>",
+   {
+    "animated": true,
+    "name": "name",
+    "id": "123"
+   }
+  ],
+  [
+   "bad:",
+   null
+  ],
+  [
+   "%E0%A4%A",
+   {
+    "animated": false,
+    "name": "%E0%A4%A"
+   }
+  ],
+  [
+   "x:y:z",
+   null
+  ],
+  [
+   "<:a:1>",
+   null
+  ]
+ ],
+ "verify": [
+  [
+   "ok",
+   {
+    "ok": "x"
+   }
+  ],
+  [
+   "number",
+   {
+    "error": "Error",
+    "code": null,
+    "message": "Expected a string, got 5 instead."
+   }
+  ],
+  [
+   "empty allowed",
+   {
+    "ok": ""
+   }
+  ],
+  [
+   "empty refused",
+   {
+    "error": "TypeError",
+    "code": null,
+    "message": "nope"
+   }
+  ]
+ ],
+ "flat": [
+  [
+   "plain",
+   {
+    "id": "1",
+    "name": "thing",
+    "tags": [
+     "a",
+     "b"
+    ],
+    "when": 1700000000000,
+    "inner": {
+     "deep": {
+      "x": 1
+     },
+     "list": [
+      1,
+      "J",
+      {
+       "y": 2
+      }
+     ]
+    },
+    "nothing": null,
+    "flag": false,
+    "wrapped": [
+     "k"
+    ],
+    "json": {
+     "z": 3
+    }
+   }
+  ],
+  [
+   "rename",
+   {
+    "id": "1",
+    "title": "thing",
+    "when": 1700000000000,
+    "inner": {
+     "deep": {
+      "x": 1
+     },
+     "list": [
+      1,
+      "J",
+      {
+       "y": 2
+      }
+     ]
+    },
+    "nothing": null,
+    "flag": false,
+    "wrapped": [
+     "k"
+    ],
+    "json": {
+     "z": 3
+    }
+   }
+  ],
+  [
+   "add hidden",
+   {
+    "id": "1",
+    "name": "thing",
+    "tags": [
+     "a",
+     "b"
+    ],
+    "when": 1700000000000,
+    "inner": {
+     "deep": {
+      "x": 1
+     },
+     "list": [
+      1,
+      "J",
+      {
+       "y": 2
+      }
+     ]
+    },
+    "nothing": null,
+    "flag": false,
+    "wrapped": [
+     "k"
+    ],
+    "json": {
+     "z": 3
+    },
+    "client": {},
+    "_secret": "s"
+   }
+  ],
+  [
+   "primitive",
+   5
+  ],
+  [
+   "null",
+   null
+  ]
+ ],
+ "clean": [
+  [
+   "hi <@1> and <@!2> and <@3> and <@9>",
+   "hi @Ali and @sara and @Member Three and <@9>",
+   "hi @Ali and @sara and <@3> and <@9>"
+  ],
+  [
+   "role <@&4> <@&8>",
+   "role @Mods <@&8>",
+   "role <@&4> <@&8>"
+  ],
+  [
+   "chan <#5> <#6> <#7>",
+   "chan #general <#6> <#7>",
+   "chan #general <#6> <#7>"
+  ],
+  [
+   "@everyone @here",
+   "@​everyone @​here",
+   "@​everyone @​here"
+  ],
+  [
+   "mix <@1><@&4><#5> @here",
+   "mix @Ali@Mods#general @​here",
+   "mix @Ali<@&4>#general @​here"
+  ]
+ ],
+ "codeBlock": "a `​`` b `​``"
+}

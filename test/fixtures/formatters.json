@@ -1,0 +1,1127 @@
+{
+ "out": [
+  [
+   "**bold** *it* _it_ __under__ ~~strike~~ ||spoil||",
+   {},
+   "\\*\\*bold\\*\\* \\*it\\* \\_it\\_ \\_\\_under\\_\\_ \\~\\~strike\\~\\~ \\|\\|spoil\\|\\|"
+  ],
+  [
+   "**bold** *it* _it_ __under__ ~~strike~~ ||spoil||",
+   {
+    "codeBlockContent": false
+   },
+   "\\*\\*bold\\*\\* \\*it\\* \\_it\\_ \\_\\_under\\_\\_ \\~\\~strike\\~\\~ \\|\\|spoil\\|\\|"
+  ],
+  [
+   "**bold** *it* _it_ __under__ ~~strike~~ ||spoil||",
+   {
+    "inlineCodeContent": false
+   },
+   "\\*\\*bold\\*\\* \\*it\\* \\_it\\_ \\_\\_under\\_\\_ \\~\\~strike\\~\\~ \\|\\|spoil\\|\\|"
+  ],
+  [
+   "**bold** *it* _it_ __under__ ~~strike~~ ||spoil||",
+   {
+    "codeBlock": false,
+    "inlineCode": false
+   },
+   "\\*\\*bold\\*\\* \\*it\\* \\_it\\_ \\_\\_under\\_\\_ \\~\\~strike\\~\\~ \\|\\|spoil\\|\\|"
+  ],
+  [
+   "**bold** *it* _it_ __under__ ~~strike~~ ||spoil||",
+   {
+    "heading": true,
+    "bulletedList": true,
+    "numberedList": true,
+    "maskedLink": true
+   },
+   "\\*\\*bold\\*\\* \\*it\\* \\_it\\_ \\_\\_under\\_\\_ \\~\\~strike\\~\\~ \\|\\|spoil\\|\\|"
+  ],
+  [
+   "**bold** *it* _it_ __under__ ~~strike~~ ||spoil||",
+   {
+    "escape": false,
+    "italic": false
+   },
+   "\\*\\*bold\\*\\* *it* _it_ \\_\\_under\\_\\_ \\~\\~strike\\~\\~ \\|\\|spoil\\|\\|"
+  ],
+  [
+   "**bold** *it* _it_ __under__ ~~strike~~ ||spoil||",
+   {
+    "bold": false,
+    "underline": false,
+    "strikethrough": false,
+    "spoiler": false
+   },
+   "**bold** \\*it\\* \\_it\\_ __under__ ~~strike~~ ||spoil||"
+  ],
+  [
+   "a\b * back",
+   {},
+   "a\b \\* back"
+  ],
+  [
+   "a\b * back",
+   {
+    "codeBlockContent": false
+   },
+   "a\b \\* back"
+  ],
+  [
+   "a\b * back",
+   {
+    "inlineCodeContent": false
+   },
+   "a\b \\* back"
+  ],
+  [
+   "a\b * back",
+   {
+    "codeBlock": false,
+    "inlineCode": false
+   },
+   "a\b \\* back"
+  ],
+  [
+   "a\b * back",
+   {
+    "heading": true,
+    "bulletedList": true,
+    "numberedList": true,
+    "maskedLink": true
+   },
+   "a\b \\* back"
+  ],
+  [
+   "a\b * back",
+   {
+    "escape": false,
+    "italic": false
+   },
+   "a\b * back"
+  ],
+  [
+   "a\b * back",
+   {
+    "bold": false,
+    "underline": false,
+    "strikethrough": false,
+    "spoiler": false
+   },
+   "a\b \\* back"
+  ],
+  [
+   "`code` and ``two`` and ```block```",
+   {},
+   "\\`code\\` and \\`\\`two\\`\\` and \\`\\`\\`block\\`\\`\\`"
+  ],
+  [
+   "`code` and ``two`` and ```block```",
+   {
+    "codeBlockContent": false
+   },
+   "\\`code\\` and \\`\\`two\\`\\` and \\`\\`\\`block\\`\\`\\`"
+  ],
+  [
+   "`code` and ``two`` and ```block```",
+   {
+    "inlineCodeContent": false
+   },
+   "\\`code\\` and ``two`` and \\`\\`\\`block\\`\\`\\`"
+  ],
+  [
+   "`code` and ``two`` and ```block```",
+   {
+    "codeBlock": false,
+    "inlineCode": false
+   },
+   "`code` and ``two`` and ```block```"
+  ],
+  [
+   "`code` and ``two`` and ```block```",
+   {
+    "heading": true,
+    "bulletedList": true,
+    "numberedList": true,
+    "maskedLink": true
+   },
+   "\\`code\\` and \\`\\`two\\`\\` and \\`\\`\\`block\\`\\`\\`"
+  ],
+  [
+   "`code` and ``two`` and ```block```",
+   {
+    "escape": false,
+    "italic": false
+   },
+   "\\`code\\` and \\`\\`two\\`\\` and \\`\\`\\`block\\`\\`\\`"
+  ],
+  [
+   "`code` and ``two`` and ```block```",
+   {
+    "bold": false,
+    "underline": false,
+    "strikethrough": false,
+    "spoiler": false
+   },
+   "\\`code\\` and \\`\\`two\\`\\` and \\`\\`\\`block\\`\\`\\`"
+  ],
+  [
+   "```js\nconst a = *1*;\n``` after **b**",
+   {},
+   "\\`\\`\\`js\nconst a = \\*1\\*;\n\\`\\`\\` after \\*\\*b\\*\\*"
+  ],
+  [
+   "```js\nconst a = *1*;\n``` after **b**",
+   {
+    "codeBlockContent": false
+   },
+   "\\`\\`\\`js\nconst a = *1*;\n\\`\\`\\` after \\*\\*b\\*\\*"
+  ],
+  [
+   "```js\nconst a = *1*;\n``` after **b**",
+   {
+    "inlineCodeContent": false
+   },
+   "\\`\\`\\`js\nconst a = \\*1\\*;\n\\`\\`\\` after \\*\\*b\\*\\*"
+  ],
+  [
+   "```js\nconst a = *1*;\n``` after **b**",
+   {
+    "codeBlock": false,
+    "inlineCode": false
+   },
+   "```js\nconst a = \\*1\\*;\n``` after \\*\\*b\\*\\*"
+  ],
+  [
+   "```js\nconst a = *1*;\n``` after **b**",
+   {
+    "heading": true,
+    "bulletedList": true,
+    "numberedList": true,
+    "maskedLink": true
+   },
+   "\\`\\`\\`js\nconst a = \\*1\\*;\n\\`\\`\\` after \\*\\*b\\*\\*"
+  ],
+  [
+   "```js\nconst a = *1*;\n``` after **b**",
+   {
+    "escape": false,
+    "italic": false
+   },
+   "\\`\\`\\`js\nconst a = *1*;\n\\`\\`\\` after \\*\\*b\\*\\*"
+  ],
+  [
+   "```js\nconst a = *1*;\n``` after **b**",
+   {
+    "bold": false,
+    "underline": false,
+    "strikethrough": false,
+    "spoiler": false
+   },
+   "\\`\\`\\`js\nconst a = \\*1\\*;\n\\`\\`\\` after **b**"
+  ],
+  [
+   "x `in *line*` y *z*",
+   {},
+   "x \\`in \\*line\\*\\` y \\*z\\*"
+  ],
+  [
+   "x `in *line*` y *z*",
+   {
+    "codeBlockContent": false
+   },
+   "x \\`in \\*line\\*\\` y \\*z\\*"
+  ],
+  [
+   "x `in *line*` y *z*",
+   {
+    "inlineCodeContent": false
+   },
+   "x \\`in *line*\\` y \\*z\\*"
+  ],
+  [
+   "x `in *line*` y *z*",
+   {
+    "codeBlock": false,
+    "inlineCode": false
+   },
+   "x `in \\*line\\*` y \\*z\\*"
+  ],
+  [
+   "x `in *line*` y *z*",
+   {
+    "heading": true,
+    "bulletedList": true,
+    "numberedList": true,
+    "maskedLink": true
+   },
+   "x \\`in \\*line\\*\\` y \\*z\\*"
+  ],
+  [
+   "x `in *line*` y *z*",
+   {
+    "escape": false,
+    "italic": false
+   },
+   "x \\`in *line*\\` y *z*"
+  ],
+  [
+   "x `in *line*` y *z*",
+   {
+    "bold": false,
+    "underline": false,
+    "strikethrough": false,
+    "spoiler": false
+   },
+   "x \\`in \\*line\\*\\` y \\*z\\*"
+  ],
+  [
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1. one\n22. two",
+   {},
+   "# Head\n## Sub\n- item\n\\* star\n  - nested\n1. one\n22. two"
+  ],
+  [
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1. one\n22. two",
+   {
+    "codeBlockContent": false
+   },
+   "# Head\n## Sub\n- item\n\\* star\n  - nested\n1. one\n22. two"
+  ],
+  [
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1. one\n22. two",
+   {
+    "inlineCodeContent": false
+   },
+   "# Head\n## Sub\n- item\n\\* star\n  - nested\n1. one\n22. two"
+  ],
+  [
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1. one\n22. two",
+   {
+    "codeBlock": false,
+    "inlineCode": false
+   },
+   "# Head\n## Sub\n- item\n\\* star\n  - nested\n1. one\n22. two"
+  ],
+  [
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1. one\n22. two",
+   {
+    "heading": true,
+    "bulletedList": true,
+    "numberedList": true,
+    "maskedLink": true
+   },
+   "\\# Head\n\\## Sub\n\\- item\n\\\\* star\n  \\- nested\n1\\. one\n22\\. two"
+  ],
+  [
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1. one\n22. two",
+   {
+    "escape": false,
+    "italic": false
+   },
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1. one\n22. two"
+  ],
+  [
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1. one\n22. two",
+   {
+    "bold": false,
+    "underline": false,
+    "strikethrough": false,
+    "spoiler": false
+   },
+   "# Head\n## Sub\n- item\n\\* star\n  - nested\n1. one\n22. two"
+  ],
+  [
+   "[link](https://bisim.gg) and [x](y)",
+   {},
+   "[link](https://bisim.gg) and [x](y)"
+  ],
+  [
+   "[link](https://bisim.gg) and [x](y)",
+   {
+    "codeBlockContent": false
+   },
+   "[link](https://bisim.gg) and [x](y)"
+  ],
+  [
+   "[link](https://bisim.gg) and [x](y)",
+   {
+    "inlineCodeContent": false
+   },
+   "[link](https://bisim.gg) and [x](y)"
+  ],
+  [
+   "[link](https://bisim.gg) and [x](y)",
+   {
+    "codeBlock": false,
+    "inlineCode": false
+   },
+   "[link](https://bisim.gg) and [x](y)"
+  ],
+  [
+   "[link](https://bisim.gg) and [x](y)",
+   {
+    "heading": true,
+    "bulletedList": true,
+    "numberedList": true,
+    "maskedLink": true
+   },
+   "\\[link](https://bisim.gg) and [x](y)"
+  ],
+  [
+   "[link](https://bisim.gg) and [x](y)",
+   {
+    "escape": false,
+    "italic": false
+   },
+   "[link](https://bisim.gg) and [x](y)"
+  ],
+  [
+   "[link](https://bisim.gg) and [x](y)",
+   {
+    "bold": false,
+    "underline": false,
+    "strikethrough": false,
+    "spoiler": false
+   },
+   "[link](https://bisim.gg) and [x](y)"
+  ],
+  [
+   "*a**b***c* _a__b___c_",
+   {},
+   "\\*a\\*\\*b\\\\*\\**c\\* \\_a\\_\\_b\\\\_\\__c\\_"
+  ],
+  [
+   "*a**b***c* _a__b___c_",
+   {
+    "codeBlockContent": false
+   },
+   "\\*a\\*\\*b\\\\*\\**c\\* \\_a\\_\\_b\\\\_\\__c\\_"
+  ],
+  [
+   "*a**b***c* _a__b___c_",
+   {
+    "inlineCodeContent": false
+   },
+   "\\*a\\*\\*b\\\\*\\**c\\* \\_a\\_\\_b\\\\_\\__c\\_"
+  ],
+  [
+   "*a**b***c* _a__b___c_",
+   {
+    "codeBlock": false,
+    "inlineCode": false
+   },
+   "\\*a\\*\\*b\\\\*\\**c\\* \\_a\\_\\_b\\\\_\\__c\\_"
+  ],
+  [
+   "*a**b***c* _a__b___c_",
+   {
+    "heading": true,
+    "bulletedList": true,
+    "numberedList": true,
+    "maskedLink": true
+   },
+   "\\*a\\*\\*b\\\\*\\**c\\* \\_a\\_\\_b\\\\_\\__c\\_"
+  ],
+  [
+   "*a**b***c* _a__b___c_",
+   {
+    "escape": false,
+    "italic": false
+   },
+   "*a\\*\\*b\\*\\**c* _a\\_\\_b\\_\\__c_"
+  ],
+  [
+   "*a**b***c* _a__b___c_",
+   {
+    "bold": false,
+    "underline": false,
+    "strikethrough": false,
+    "spoiler": false
+   },
+   "\\*a**b\\***c\\* \\_a__b\\___c\\_"
+  ],
+  [
+   "snake_case_name and 2*3*4",
+   {},
+   "snake\\_case\\_name and 2\\*3\\*4"
+  ],
+  [
+   "snake_case_name and 2*3*4",
+   {
+    "codeBlockContent": false
+   },
+   "snake\\_case\\_name and 2\\*3\\*4"
+  ],
+  [
+   "snake_case_name and 2*3*4",
+   {
+    "inlineCodeContent": false
+   },
+   "snake\\_case\\_name and 2\\*3\\*4"
+  ],
+  [
+   "snake_case_name and 2*3*4",
+   {
+    "codeBlock": false,
+    "inlineCode": false
+   },
+   "snake\\_case\\_name and 2\\*3\\*4"
+  ],
+  [
+   "snake_case_name and 2*3*4",
+   {
+    "heading": true,
+    "bulletedList": true,
+    "numberedList": true,
+    "maskedLink": true
+   },
+   "snake\\_case\\_name and 2\\*3\\*4"
+  ],
+  [
+   "snake_case_name and 2*3*4",
+   {
+    "escape": false,
+    "italic": false
+   },
+   "snake_case_name and 2*3*4"
+  ],
+  [
+   "snake_case_name and 2*3*4",
+   {
+    "bold": false,
+    "underline": false,
+    "strikethrough": false,
+    "spoiler": false
+   },
+   "snake\\_case\\_name and 2\\*3\\*4"
+  ]
+ ],
+ "single": [
+  [
+   "escapeEscape",
+   "**bold** *it* _it_ __under__ ~~strike~~ ||spoil||",
+   "**bold** *it* _it_ __under__ ~~strike~~ ||spoil||"
+  ],
+  [
+   "escapeEscape",
+   "a\b * back",
+   "a\b * back"
+  ],
+  [
+   "escapeEscape",
+   "`code` and ``two`` and ```block```",
+   "`code` and ``two`` and ```block```"
+  ],
+  [
+   "escapeEscape",
+   "```js\nconst a = *1*;\n``` after **b**",
+   "```js\nconst a = *1*;\n``` after **b**"
+  ],
+  [
+   "escapeEscape",
+   "x `in *line*` y *z*",
+   "x `in *line*` y *z*"
+  ],
+  [
+   "escapeEscape",
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1. one\n22. two",
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1. one\n22. two"
+  ],
+  [
+   "escapeEscape",
+   "[link](https://bisim.gg) and [x](y)",
+   "[link](https://bisim.gg) and [x](y)"
+  ],
+  [
+   "escapeEscape",
+   "*a**b***c* _a__b___c_",
+   "*a**b***c* _a__b___c_"
+  ],
+  [
+   "escapeEscape",
+   "snake_case_name and 2*3*4",
+   "snake_case_name and 2*3*4"
+  ],
+  [
+   "escapeCodeBlock",
+   "**bold** *it* _it_ __under__ ~~strike~~ ||spoil||",
+   "**bold** *it* _it_ __under__ ~~strike~~ ||spoil||"
+  ],
+  [
+   "escapeCodeBlock",
+   "a\b * back",
+   "a\b * back"
+  ],
+  [
+   "escapeCodeBlock",
+   "`code` and ``two`` and ```block```",
+   "`code` and ``two`` and \\`\\`\\`block\\`\\`\\`"
+  ],
+  [
+   "escapeCodeBlock",
+   "```js\nconst a = *1*;\n``` after **b**",
+   "\\`\\`\\`js\nconst a = *1*;\n\\`\\`\\` after **b**"
+  ],
+  [
+   "escapeCodeBlock",
+   "x `in *line*` y *z*",
+   "x `in *line*` y *z*"
+  ],
+  [
+   "escapeCodeBlock",
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1. one\n22. two",
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1. one\n22. two"
+  ],
+  [
+   "escapeCodeBlock",
+   "[link](https://bisim.gg) and [x](y)",
+   "[link](https://bisim.gg) and [x](y)"
+  ],
+  [
+   "escapeCodeBlock",
+   "*a**b***c* _a__b___c_",
+   "*a**b***c* _a__b___c_"
+  ],
+  [
+   "escapeCodeBlock",
+   "snake_case_name and 2*3*4",
+   "snake_case_name and 2*3*4"
+  ],
+  [
+   "escapeInlineCode",
+   "**bold** *it* _it_ __under__ ~~strike~~ ||spoil||",
+   "**bold** *it* _it_ __under__ ~~strike~~ ||spoil||"
+  ],
+  [
+   "escapeInlineCode",
+   "a\b * back",
+   "a\b * back"
+  ],
+  [
+   "escapeInlineCode",
+   "`code` and ``two`` and ```block```",
+   "\\`code\\` and \\`\\`two\\`\\` and ```block```"
+  ],
+  [
+   "escapeInlineCode",
+   "```js\nconst a = *1*;\n``` after **b**",
+   "```js\nconst a = *1*;\n``` after **b**"
+  ],
+  [
+   "escapeInlineCode",
+   "x `in *line*` y *z*",
+   "x \\`in *line*\\` y *z*"
+  ],
+  [
+   "escapeInlineCode",
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1. one\n22. two",
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1. one\n22. two"
+  ],
+  [
+   "escapeInlineCode",
+   "[link](https://bisim.gg) and [x](y)",
+   "[link](https://bisim.gg) and [x](y)"
+  ],
+  [
+   "escapeInlineCode",
+   "*a**b***c* _a__b___c_",
+   "*a**b***c* _a__b___c_"
+  ],
+  [
+   "escapeInlineCode",
+   "snake_case_name and 2*3*4",
+   "snake_case_name and 2*3*4"
+  ],
+  [
+   "escapeItalic",
+   "**bold** *it* _it_ __under__ ~~strike~~ ||spoil||",
+   "**bold** \\*it\\* \\_it\\_ __under__ ~~strike~~ ||spoil||"
+  ],
+  [
+   "escapeItalic",
+   "a\b * back",
+   "a\b \\* back"
+  ],
+  [
+   "escapeItalic",
+   "`code` and ``two`` and ```block```",
+   "`code` and ``two`` and ```block```"
+  ],
+  [
+   "escapeItalic",
+   "```js\nconst a = *1*;\n``` after **b**",
+   "```js\nconst a = \\*1\\*;\n``` after **b**"
+  ],
+  [
+   "escapeItalic",
+   "x `in *line*` y *z*",
+   "x `in \\*line\\*` y \\*z\\*"
+  ],
+  [
+   "escapeItalic",
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1. one\n22. two",
+   "# Head\n## Sub\n- item\n\\* star\n  - nested\n1. one\n22. two"
+  ],
+  [
+   "escapeItalic",
+   "[link](https://bisim.gg) and [x](y)",
+   "[link](https://bisim.gg) and [x](y)"
+  ],
+  [
+   "escapeItalic",
+   "*a**b***c* _a__b___c_",
+   "\\*a**b\\***c\\* \\_a__b\\___c\\_"
+  ],
+  [
+   "escapeItalic",
+   "snake_case_name and 2*3*4",
+   "snake\\_case\\_name and 2\\*3\\*4"
+  ],
+  [
+   "escapeBold",
+   "**bold** *it* _it_ __under__ ~~strike~~ ||spoil||",
+   "\\*\\*bold\\*\\* *it* _it_ __under__ ~~strike~~ ||spoil||"
+  ],
+  [
+   "escapeBold",
+   "a\b * back",
+   "a\b * back"
+  ],
+  [
+   "escapeBold",
+   "`code` and ``two`` and ```block```",
+   "`code` and ``two`` and ```block```"
+  ],
+  [
+   "escapeBold",
+   "```js\nconst a = *1*;\n``` after **b**",
+   "```js\nconst a = *1*;\n``` after \\*\\*b\\*\\*"
+  ],
+  [
+   "escapeBold",
+   "x `in *line*` y *z*",
+   "x `in *line*` y *z*"
+  ],
+  [
+   "escapeBold",
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1. one\n22. two",
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1. one\n22. two"
+  ],
+  [
+   "escapeBold",
+   "[link](https://bisim.gg) and [x](y)",
+   "[link](https://bisim.gg) and [x](y)"
+  ],
+  [
+   "escapeBold",
+   "*a**b***c* _a__b___c_",
+   "*a\\*\\*b\\*\\**c* _a__b___c_"
+  ],
+  [
+   "escapeBold",
+   "snake_case_name and 2*3*4",
+   "snake_case_name and 2*3*4"
+  ],
+  [
+   "escapeUnderline",
+   "**bold** *it* _it_ __under__ ~~strike~~ ||spoil||",
+   "**bold** *it* _it_ \\_\\_under\\_\\_ ~~strike~~ ||spoil||"
+  ],
+  [
+   "escapeUnderline",
+   "a\b * back",
+   "a\b * back"
+  ],
+  [
+   "escapeUnderline",
+   "`code` and ``two`` and ```block```",
+   "`code` and ``two`` and ```block```"
+  ],
+  [
+   "escapeUnderline",
+   "```js\nconst a = *1*;\n``` after **b**",
+   "```js\nconst a = *1*;\n``` after **b**"
+  ],
+  [
+   "escapeUnderline",
+   "x `in *line*` y *z*",
+   "x `in *line*` y *z*"
+  ],
+  [
+   "escapeUnderline",
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1. one\n22. two",
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1. one\n22. two"
+  ],
+  [
+   "escapeUnderline",
+   "[link](https://bisim.gg) and [x](y)",
+   "[link](https://bisim.gg) and [x](y)"
+  ],
+  [
+   "escapeUnderline",
+   "*a**b***c* _a__b___c_",
+   "*a**b***c* _a\\_\\_b\\_\\__c_"
+  ],
+  [
+   "escapeUnderline",
+   "snake_case_name and 2*3*4",
+   "snake_case_name and 2*3*4"
+  ],
+  [
+   "escapeStrikethrough",
+   "**bold** *it* _it_ __under__ ~~strike~~ ||spoil||",
+   "**bold** *it* _it_ __under__ \\~\\~strike\\~\\~ ||spoil||"
+  ],
+  [
+   "escapeStrikethrough",
+   "a\b * back",
+   "a\b * back"
+  ],
+  [
+   "escapeStrikethrough",
+   "`code` and ``two`` and ```block```",
+   "`code` and ``two`` and ```block```"
+  ],
+  [
+   "escapeStrikethrough",
+   "```js\nconst a = *1*;\n``` after **b**",
+   "```js\nconst a = *1*;\n``` after **b**"
+  ],
+  [
+   "escapeStrikethrough",
+   "x `in *line*` y *z*",
+   "x `in *line*` y *z*"
+  ],
+  [
+   "escapeStrikethrough",
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1. one\n22. two",
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1. one\n22. two"
+  ],
+  [
+   "escapeStrikethrough",
+   "[link](https://bisim.gg) and [x](y)",
+   "[link](https://bisim.gg) and [x](y)"
+  ],
+  [
+   "escapeStrikethrough",
+   "*a**b***c* _a__b___c_",
+   "*a**b***c* _a__b___c_"
+  ],
+  [
+   "escapeStrikethrough",
+   "snake_case_name and 2*3*4",
+   "snake_case_name and 2*3*4"
+  ],
+  [
+   "escapeSpoiler",
+   "**bold** *it* _it_ __under__ ~~strike~~ ||spoil||",
+   "**bold** *it* _it_ __under__ ~~strike~~ \\|\\|spoil\\|\\|"
+  ],
+  [
+   "escapeSpoiler",
+   "a\b * back",
+   "a\b * back"
+  ],
+  [
+   "escapeSpoiler",
+   "`code` and ``two`` and ```block```",
+   "`code` and ``two`` and ```block```"
+  ],
+  [
+   "escapeSpoiler",
+   "```js\nconst a = *1*;\n``` after **b**",
+   "```js\nconst a = *1*;\n``` after **b**"
+  ],
+  [
+   "escapeSpoiler",
+   "x `in *line*` y *z*",
+   "x `in *line*` y *z*"
+  ],
+  [
+   "escapeSpoiler",
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1. one\n22. two",
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1. one\n22. two"
+  ],
+  [
+   "escapeSpoiler",
+   "[link](https://bisim.gg) and [x](y)",
+   "[link](https://bisim.gg) and [x](y)"
+  ],
+  [
+   "escapeSpoiler",
+   "*a**b***c* _a__b___c_",
+   "*a**b***c* _a__b___c_"
+  ],
+  [
+   "escapeSpoiler",
+   "snake_case_name and 2*3*4",
+   "snake_case_name and 2*3*4"
+  ],
+  [
+   "escapeHeading",
+   "**bold** *it* _it_ __under__ ~~strike~~ ||spoil||",
+   "**bold** *it* _it_ __under__ ~~strike~~ ||spoil||"
+  ],
+  [
+   "escapeHeading",
+   "a\b * back",
+   "a\b * back"
+  ],
+  [
+   "escapeHeading",
+   "`code` and ``two`` and ```block```",
+   "`code` and ``two`` and ```block```"
+  ],
+  [
+   "escapeHeading",
+   "```js\nconst a = *1*;\n``` after **b**",
+   "```js\nconst a = *1*;\n``` after **b**"
+  ],
+  [
+   "escapeHeading",
+   "x `in *line*` y *z*",
+   "x `in *line*` y *z*"
+  ],
+  [
+   "escapeHeading",
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1. one\n22. two",
+   "\\# Head\n\\## Sub\n- item\n* star\n  - nested\n1. one\n22. two"
+  ],
+  [
+   "escapeHeading",
+   "[link](https://bisim.gg) and [x](y)",
+   "[link](https://bisim.gg) and [x](y)"
+  ],
+  [
+   "escapeHeading",
+   "*a**b***c* _a__b___c_",
+   "*a**b***c* _a__b___c_"
+  ],
+  [
+   "escapeHeading",
+   "snake_case_name and 2*3*4",
+   "snake_case_name and 2*3*4"
+  ],
+  [
+   "escapeBulletedList",
+   "**bold** *it* _it_ __under__ ~~strike~~ ||spoil||",
+   "**bold** *it* _it_ __under__ ~~strike~~ ||spoil||"
+  ],
+  [
+   "escapeBulletedList",
+   "a\b * back",
+   "a\b * back"
+  ],
+  [
+   "escapeBulletedList",
+   "`code` and ``two`` and ```block```",
+   "`code` and ``two`` and ```block```"
+  ],
+  [
+   "escapeBulletedList",
+   "```js\nconst a = *1*;\n``` after **b**",
+   "```js\nconst a = *1*;\n``` after **b**"
+  ],
+  [
+   "escapeBulletedList",
+   "x `in *line*` y *z*",
+   "x `in *line*` y *z*"
+  ],
+  [
+   "escapeBulletedList",
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1. one\n22. two",
+   "# Head\n## Sub\n\\- item\n\\* star\n  \\- nested\n1. one\n22. two"
+  ],
+  [
+   "escapeBulletedList",
+   "[link](https://bisim.gg) and [x](y)",
+   "[link](https://bisim.gg) and [x](y)"
+  ],
+  [
+   "escapeBulletedList",
+   "*a**b***c* _a__b___c_",
+   "*a**b***c* _a__b___c_"
+  ],
+  [
+   "escapeBulletedList",
+   "snake_case_name and 2*3*4",
+   "snake_case_name and 2*3*4"
+  ],
+  [
+   "escapeNumberedList",
+   "**bold** *it* _it_ __under__ ~~strike~~ ||spoil||",
+   "**bold** *it* _it_ __under__ ~~strike~~ ||spoil||"
+  ],
+  [
+   "escapeNumberedList",
+   "a\b * back",
+   "a\b * back"
+  ],
+  [
+   "escapeNumberedList",
+   "`code` and ``two`` and ```block```",
+   "`code` and ``two`` and ```block```"
+  ],
+  [
+   "escapeNumberedList",
+   "```js\nconst a = *1*;\n``` after **b**",
+   "```js\nconst a = *1*;\n``` after **b**"
+  ],
+  [
+   "escapeNumberedList",
+   "x `in *line*` y *z*",
+   "x `in *line*` y *z*"
+  ],
+  [
+   "escapeNumberedList",
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1. one\n22. two",
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1\\. one\n22\\. two"
+  ],
+  [
+   "escapeNumberedList",
+   "[link](https://bisim.gg) and [x](y)",
+   "[link](https://bisim.gg) and [x](y)"
+  ],
+  [
+   "escapeNumberedList",
+   "*a**b***c* _a__b___c_",
+   "*a**b***c* _a__b___c_"
+  ],
+  [
+   "escapeNumberedList",
+   "snake_case_name and 2*3*4",
+   "snake_case_name and 2*3*4"
+  ],
+  [
+   "escapeMaskedLink",
+   "**bold** *it* _it_ __under__ ~~strike~~ ||spoil||",
+   "**bold** *it* _it_ __under__ ~~strike~~ ||spoil||"
+  ],
+  [
+   "escapeMaskedLink",
+   "a\b * back",
+   "a\b * back"
+  ],
+  [
+   "escapeMaskedLink",
+   "`code` and ``two`` and ```block```",
+   "`code` and ``two`` and ```block```"
+  ],
+  [
+   "escapeMaskedLink",
+   "```js\nconst a = *1*;\n``` after **b**",
+   "```js\nconst a = *1*;\n``` after **b**"
+  ],
+  [
+   "escapeMaskedLink",
+   "x `in *line*` y *z*",
+   "x `in *line*` y *z*"
+  ],
+  [
+   "escapeMaskedLink",
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1. one\n22. two",
+   "# Head\n## Sub\n- item\n* star\n  - nested\n1. one\n22. two"
+  ],
+  [
+   "escapeMaskedLink",
+   "[link](https://bisim.gg) and [x](y)",
+   "\\[link](https://bisim.gg) and [x](y)"
+  ],
+  [
+   "escapeMaskedLink",
+   "*a**b***c* _a__b___c_",
+   "*a**b***c* _a__b___c_"
+  ],
+  [
+   "escapeMaskedLink",
+   "snake_case_name and 2*3*4",
+   "snake_case_name and 2*3*4"
+  ]
+ ],
+ "misc": {
+  "lists": [
+   [
+    "unordered",
+    [
+     "a",
+     [
+      "b",
+      [
+       "c"
+      ]
+     ],
+     "d"
+    ],
+    "- a\n  - b\n    - c\n- d"
+   ],
+   [
+    "ordered",
+    [
+     "a",
+     [
+      "b",
+      "c"
+     ],
+     "d"
+    ],
+    "1. a\n  1. b\n  2. c\n2. d"
+   ],
+   [
+    "ordered from 5",
+    [
+     "a",
+     "b"
+    ],
+    "5. a\n6. b"
+   ],
+   [
+    "ordered from 0",
+    [
+     "a",
+     "b"
+    ],
+    "1. a\n2. b"
+   ],
+   [
+    "ordered from -3",
+    [
+     "a"
+    ],
+    "1. a"
+   ]
+  ],
+  "wrappers": {
+   "inlineCode": "`x`",
+   "italic": "_x_",
+   "bold": "**x**",
+   "underline": "__x__",
+   "strikethrough": "~~x~~",
+   "quote": "> x",
+   "blockQuote": ">>> x",
+   "spoiler": "||x||",
+   "subtext": "-# x",
+   "hideLinkEmbed": "<https://bisim.gg>",
+   "hideLinkEmbedUrl": "<https://bisim.gg/a?b=1>",
+   "hyperlinkUrl": "[a](https://bisim.gg/a?b=1)",
+   "hyperlinkEmptyTitle": "[a](https://b.c)",
+   "userMention": "<@1>",
+   "channelMention": "<#2>",
+   "roleMention": "<@&3>",
+   "command2": "</ping:9>",
+   "command3": "</a b:9>",
+   "command4": "</a b c:9>",
+   "channelLink": "https://bisim.gg/channels/@me/5",
+   "channelLinkGuild": "https://bisim.gg/channels/6/5",
+   "messageLink": "https://bisim.gg/channels/@me/5/7",
+   "messageLinkGuild": "https://bisim.gg/channels/6/5/7",
+   "heading1": "# h",
+   "heading3": "### h",
+   "emojiAnimated": "<a:_:4>",
+   "emojiNamed": "<:n:4>",
+   "codeBlockEmpty": "```\n\n```",
+   "shrug": "¯\\_(ツ)_/¯",
+   "tableflip": "(╯°□°)╯︵ ┻━┻",
+   "unflip": "┬─┬ノ( º _ ºノ)"
+  }
+ }
+}

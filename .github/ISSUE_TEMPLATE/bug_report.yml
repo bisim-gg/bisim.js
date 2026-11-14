@@ -1,0 +1,52 @@
+name: Bug report
+description: Something in bisim.js does not work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please do not include your bot token or any other secret.
+        Security problems go to security@bisim.gg instead.
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: code
+    attributes:
+      label: Code to reproduce it
+      description: The smallest piece of code that shows the problem.
+      render: js
+    validations:
+      required: true
+  - type: textarea
+    id: error
+    attributes:
+      label: Error and stack trace
+      description: Paste the full error, if there is one.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: bisim.js version
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: node
+    attributes:
+      label: Node.js version
+      placeholder: '22.18.0'
+    validations:
+      required: true
+  - type: dropdown
+    id: discordjs
+    attributes:
+      label: Does the same code work with discord.js on Discord?
+      options:
+        - 'Yes'
+        - 'No'
+        - I have not tried

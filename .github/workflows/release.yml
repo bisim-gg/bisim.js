@@ -1,0 +1,48 @@
+name: Release
+
+# Publishes bisim.js to npm when a tag v<version> is pushed (for example v0.1.0).
+#
+# This uses npm trusted publishing (OIDC): no npm token is stored anywhere. Before the first release, open the
+# package settings on npmjs.com and add a trusted publisher of type GitHub Actions with
+#   organization or user: bisim-gg
+#   repository:           bisim.js
+#   workflow filename:    release.yml
+# Without that, `npm publish` below is refused.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+  id-token: write # lets npm verify this workflow (trusted publishing) and sign the provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      # Trusted publishing needs npm 11.5.1 or newer.
+      - run: npm install --global npm@latest
+
+      - name: Check that the tag matches package.json
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match package.json version ${version}" >&2
+            exit 1
+          fi
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+      - run: npm publish --provenance --access public

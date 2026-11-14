@@ -1,0 +1,109 @@
+/*
+ * Bisim's palette on VitePress. Signal green is a fill (buttons, the logo tile) and always carries ink; a
+ * green that is read uses Deep Signal on light and Signal on dark; links stay blue, as in Bisim itself.
+ */
+:root {
+  --bisim-signal: #c8f53c;
+  --bisim-ink: #0f1115;
+  --bisim-primary-ink: #3f5600;
+  --bisim-link: #1a66d6;
+
+  --vp-c-brand-1: var(--bisim-primary-ink);
+  --vp-c-brand-2: #4d6a00;
+  --vp-c-brand-3: var(--bisim-signal);
+  --vp-c-brand-soft: rgba(63, 86, 0, 0.12);
+
+  --vp-c-bg: #ffffff;
+  --vp-c-bg-alt: #f3f4ef;
+  --vp-c-bg-soft: #f3f4ef;
+  --vp-c-text-2: #565b64;
+
+  --vp-button-brand-text: var(--bisim-ink);
+  --vp-button-brand-hover-text: var(--bisim-ink);
+  --vp-button-brand-active-text: var(--bisim-ink);
+  --vp-button-brand-bg: var(--bisim-signal);
+  --vp-button-brand-border: var(--bisim-signal);
+  --vp-button-brand-hover-bg: #b9e62f;
+  --vp-button-brand-hover-border: #b9e62f;
+  --vp-button-brand-active-bg: #a9d425;
+  --vp-button-brand-active-border: #a9d425;
+
+  --vp-home-hero-name-color: var(--vp-c-text-1);
+  --vp-home-hero-name-background: none;
+
+  --vp-font-family-base: 'Inter', 'Vazirmatn', ui-sans-serif, system-ui, sans-serif;
+}
+
+.dark {
+  --bisim-primary-ink: var(--bisim-signal);
+  --bisim-link: #5197ed;
+
+  --vp-c-brand-1: var(--bisim-signal);
+  --vp-c-brand-2: #b9e62f;
+  --vp-c-brand-3: var(--bisim-signal);
+  --vp-c-brand-soft: rgba(200, 245, 60, 0.14);
+
+  --vp-c-bg: #0f1115;
+  --vp-c-bg-alt: #13161b;
+  --vp-c-bg-soft: #191c22;
+  --vp-c-bg-elv: #191c22;
+  --vp-c-text-1: #eceee8;
+  --vp-c-text-2: #a7abb2;
+  --vp-c-divider: #262a31;
+  --vp-c-gutter: #0b0d10;
+}
+
+/* Links are blue, never the theme's green. */
+.vp-doc a {
+  color: var(--bisim-link);
+  text-decoration-color: color-mix(in srgb, var(--bisim-link) 40%, transparent);
+}
+
+.vp-doc a:hover {
+  color: var(--bisim-link);
+  text-decoration-color: var(--bisim-link);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--bisim-link) 30%, transparent);
+}
+
+/*
+ * The space between the nav logo and the title. The theme's own rule is a :deep() one, which the RTL
+ * build cannot prefix, so it is set here with a logical property that works in both directions.
+ */
+.VPNavBarTitle .logo {
+  margin-inline-end: 8px;
+}
+
+/* The hero's logo tile stays a tile, without the default blurred glow. */
+.VPHero .image-bg {
+  display: none;
+}
+
+/* Persian: Vazirmatn for text, code stays left to right. */
+:root:lang(fa) {
+  --vp-font-family-base: 'Vazirmatn', 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+html[lang='fa-IR'] body {
+  line-height: 1.85;
+}
+
+/* Code reads left to right on the Persian pages too; the RTL build must not turn these around. */
+/* rtl:begin:ignore */
+html[lang='fa-IR'] .vp-doc div[class*='language-'],
+html[lang='fa-IR'] .vp-doc pre,
+html[lang='fa-IR'] .vp-doc code {
+  direction: ltr;
+  text-align: left;
+}
+/* rtl:end:ignore */
+
+html[lang='fa-IR'] .vp-doc :not(pre) > code {
+  unicode-bidi: isolate;
+}
+
+html[lang='fa-IR'] .vp-doc ol {
+  list-style-type: persian;
+}

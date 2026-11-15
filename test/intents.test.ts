@@ -269,6 +269,26 @@ describe('the new events', () => {
     expect(both).toEqual([`old:${TEXT_ID}`]);
   });
 
+  it("reads a profile rule as Discord's Member Profile trigger", async () => {
+    await login();
+    const created = waitFor<AutoModerationRule>(client, Events.AutoModerationRuleCreate);
+    gateway.dispatch('AUTO_MODERATION_RULE_CREATE', {
+      guildId: GUILD_ID,
+      automodRule: { id: '8801', guildId: GUILD_ID, name: 'Names', eventType: 'MEMBER_UPDATE', triggerType: 'KEYWORD', keywords: ['admin'], enabled: true },
+    });
+    const [rule] = await created;
+    expect(rule!.eventType).toBe(AutoModerationRuleEventType.MemberUpdate);
+    expect(rule!.triggerType).toBe(AutoModerationRuleTriggerType.MemberProfile);
+    expect(rule!.triggerMetadata.keywordFilter).toEqual(['admin']);
+    const executed = waitFor<AutoModerationActionExecution>(client, Events.AutoModerationActionExecution);
+    gateway.dispatch('AUTO_MODERATION_ACTION_EXECUTION', {
+      guildId: GUILD_ID,
+      automodAction: { guildId: GUILD_ID, actionType: 1, ruleId: '8801', ruleTriggerType: 'KEYWORD', userId: '300', matchedKeyword: 'admin' },
+    });
+    const [execution] = await executed;
+    expect(execution!.ruleTriggerType).toBe(AutoModerationRuleTriggerType.MemberProfile);
+  });
+
   it('maps AutoMod rules and actions with Discord numbers', async () => {
     await login();
     const rule = {

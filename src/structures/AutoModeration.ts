@@ -178,7 +178,12 @@ export class AutoModerationRule extends Base {
     this.name = data.name ?? '';
     this.creatorId = data.creatorId || null;
     this.eventType = data.eventType === 'MEMBER_UPDATE' ? AutoModerationRuleEventType.MemberUpdate : AutoModerationRuleEventType.MessageSend;
-    this.triggerType = triggerOf(data.triggerType);
+    // Bisim stores a profile rule as a KEYWORD rule on MEMBER_UPDATE; Discord calls it Member Profile (6).
+    const trigger = triggerOf(data.triggerType);
+    this.triggerType =
+      this.eventType === AutoModerationRuleEventType.MemberUpdate && trigger === AutoModerationRuleTriggerType.Keyword
+        ? AutoModerationRuleTriggerType.MemberProfile
+        : trigger;
     this.triggerMetadata = {
       keywordFilter: data.keywords ?? [],
       regexPatterns: data.regexPatterns ?? [],
@@ -338,7 +343,10 @@ export class AutoModerationActionExecution {
       }),
     };
     this.ruleId = data.ruleId ?? '';
-    this.ruleTriggerType = triggerOf(data.ruleTriggerType);
+    // A keyword match with no channel is a profile rule's (Discord's Member Profile, 6).
+    const trigger = triggerOf(data.ruleTriggerType);
+    this.ruleTriggerType =
+      trigger === AutoModerationRuleTriggerType.Keyword && !data.channelId ? AutoModerationRuleTriggerType.MemberProfile : trigger;
     this.userId = data.userId ?? '';
     this.channelId = data.channelId || null;
     this.messageId = data.messageId || null;

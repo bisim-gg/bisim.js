@@ -1,6 +1,6 @@
 # امبدها
 
-امبد کارتی است که زیر پیام نشان داده می‌شود: عنوان، توضیح، فیلدها، رنگ و پانویس.
+امبد کارتی است که زیر پیام نشان داده می‌شود: عنوان، توضیح، فیلدها، رنگ، پانویس و تصویر.
 
 ## ساختن امبد
 
@@ -11,15 +11,17 @@ const rules = new EmbedBuilder()
   .setColor(0x3f5600)
   .setTitle('Server rules')
   .setURL('https://bisim.gg/')
-  .setAuthor({ name: 'The moderators', url: 'https://bisim.gg' })
+  .setAuthor({ name: 'The moderators', url: 'https://bisim.gg', iconURL: 'https://example.com/mods.png' })
   .setDescription('Please read these before you post.')
+  .setThumbnail('https://example.com/logo.png')
   .addFields(
     { name: 'Be kind', value: 'No insults and no harassment.' },
     { name: 'Stay on topic', value: 'Use the right channel.', inline: true },
     { name: 'No spam', value: 'Say it once.', inline: true },
   )
+  .setImage('https://example.com/banner.png')
   .setTimestamp()
-  .setFooter({ text: 'Questions? Ask a moderator.' });
+  .setFooter({ text: 'Questions? Ask a moderator.', iconURL: 'https://example.com/help.png' });
 
 await channel.send({ embeds: [rules] });
 ```
@@ -39,16 +41,17 @@ await interaction.reply({
 | عنوان و نشانی آن | بله |
 | توضیح | بله |
 | رنگ | بله |
-| نام و نشانی نویسنده | بله |
+| نام، نشانی و آیکون نویسنده | بله |
 | فیلدها، در یک خط یا جدا | بله |
-| متن پانویس | بله |
+| متن و آیکون پانویس | بله |
 | زمان | بله |
-| تصویر و تصویر کوچک | روی سازنده می‌ماند، نمایش داده نمی‌شود |
-| آیکون نویسنده و پانویس | روی سازنده می‌ماند، نمایش داده نمی‌شود |
+| تصویر کوچک، کنار متن | بله |
+| تصویر بزرگ، زیر فیلدها | بله |
 
-`setImage()` و `setThumbnail()` مقدار را نگه می‌دارند تا کدی که از آن‌ها استفاده می‌کند همچنان اجرا شود، و
-bisim.js یک بار هشدار می‌دهد که بی‌سیم آن‌ها را نشان نمی‌دهد. برای نشان دادن تصویر، آن را به‌صورت فایل بفرستید
-(صفحهٔ [پیام‌ها و واکنش‌ها](./messages.md) را ببینید).
+هر تصویر یک پیوند `http` یا `https` با حداکثر ۲۰۴۸ نویسه است و برنامهٔ هر خواننده آن را از همان نشانی بارگذاری
+می‌کند، همان‌طور که در دیسکورد بود. `attachment://name.png` دیسکورد هنوز پشتیبانی نمی‌شود: bisim.js چنین تصویری را
+از پیام کنار می‌گذارد و یک بار هشدار می‌دهد. برای نشان دادن فایلی که ساخته‌اید، آن را به‌صورت فایل بفرستید
+(صفحهٔ [پیام‌ها و واکنش‌ها](./messages.md) را ببینید)، یا اول آن را جایی با پیوند عمومی بگذارید.
 
 ## رنگ‌ها
 

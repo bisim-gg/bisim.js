@@ -141,10 +141,13 @@ export interface RawEmbedData {
   imageUrl?: string | null;
   imageWidth?: number | null;
   imageHeight?: number | null;
+  thumbnailUrl?: string | null;
   color?: number | null;
   authorName?: string | null;
   authorUrl?: string | null;
+  authorIconUrl?: string | null;
   footerText?: string | null;
+  footerIconUrl?: string | null;
   timestamp?: string | null;
   fields?: { name: string; value: string; inline?: boolean }[];
 }

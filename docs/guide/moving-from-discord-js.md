@@ -63,7 +63,8 @@ code is `NotSupported` and whose message names the feature.
 
 - **`ClientReady`** comes after bisim.js has loaded every server, members included. It is also emitted as
   `ready`.
-- **Embeds** do not show images, thumbnails or icons. The builder keeps them and warns once.
+- **Embed pictures** (image, thumbnail, author and footer icons) must be `http` or `https` links. An
+  `attachment://` picture is left out of the message, with a warning once.
 - **Error codes** from Bisim are names such as `BOT_NOT_ALLOWED` or `RATE_LIMITED`, not Discord's numbers.
   Compare `error.code` with those names, or use `error.status`.
 - **Channel and ban events.** Channels created or deleted are noticed through server refreshes, so

@@ -4,6 +4,16 @@ All notable changes to bisim.js are listed here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- Embeds show their pictures: `setImage()`, `setThumbnail()` and the `iconURL` of `setAuthor()` and `setFooter()`
+  are sent instead of being kept on the builder, and an embed Bisim sends back has its `thumbnail` and its author
+  and footer `iconURL` filled in. A picture must be an `http` or `https` link; Discord's `attachment://` is left out
+  with a warning once, since Bisim would refuse the whole message for it. Needs the Bisim server of 2026-11-15 or
+  later; an older one ignores the pictures.
+
 ## [0.2.0] - 2026-11-14
 
 Voice: a bot joins voice channels with the new package [@bisim/voice](https://github.com/bisim-gg/voice), the

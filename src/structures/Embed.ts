@@ -14,13 +14,21 @@ export function embedFromBisim(data: RawEmbedData): APIEmbed {
   if (data.url) embed.url = data.url;
   if (data.timestamp) embed.timestamp = data.timestamp;
   if (data.color) embed.color = data.color;
-  if (data.authorName) embed.author = data.authorUrl ? { name: data.authorName, url: data.authorUrl } : { name: data.authorName };
-  if (data.footerText) embed.footer = { text: data.footerText };
+  if (data.authorName) {
+    embed.author = { name: data.authorName };
+    if (data.authorUrl) embed.author.url = data.authorUrl;
+    if (data.authorIconUrl) embed.author.icon_url = data.authorIconUrl;
+  }
+  if (data.footerText) {
+    embed.footer = { text: data.footerText };
+    if (data.footerIconUrl) embed.footer.icon_url = data.footerIconUrl;
+  }
   if (data.imageUrl) {
     embed.image = { url: data.imageUrl };
     if (data.imageWidth) embed.image.width = data.imageWidth;
     if (data.imageHeight) embed.image.height = data.imageHeight;
   }
+  if (data.thumbnailUrl) embed.thumbnail = { url: data.thumbnailUrl };
   if (data.siteName) embed.provider = { name: data.siteName };
   if (data.fields?.length) embed.fields = data.fields.map((field) => ({ name: field.name, value: field.value, inline: Boolean(field.inline) }));
   return embed;
@@ -39,7 +47,7 @@ export class Embed {
    * @param data - The embed, in Bisim's flat shape or discord.js's nested shape
    */
   public constructor(data: RawEmbedData | APIEmbed) {
-    this.data = 'authorName' in data || 'footerText' in data || 'imageUrl' in data || 'siteName' in data
+    this.data = 'authorName' in data || 'footerText' in data || 'imageUrl' in data || 'siteName' in data || 'thumbnailUrl' in data
       ? embedFromBisim(data as RawEmbedData)
       : { ...(data as APIEmbed) };
   }
@@ -80,12 +88,13 @@ export class Embed {
     return valueOrNull(this.data.timestamp);
   }
 
-  /** Always `null` on Bisim. */
+  /** The thumbnail, the small picture beside the text (Bisim shows it from its own address). */
   public get thumbnail(): { url: string; height?: number; width?: number; proxyURL?: string } | null {
-    return this.data.thumbnail ? { url: this.data.thumbnail.url } : null;
+    const { thumbnail } = this.data;
+    return thumbnail ? { url: thumbnail.url, height: thumbnail.height, width: thumbnail.width, proxyURL: thumbnail.url } : null;
   }
 
-  /** The image of a link preview. */
+  /** The large image, or the picture of a link preview. */
   public get image(): { url: string; height?: number; width?: number; proxyURL?: string } | null {
     const { image } = this.data;
     return image ? { url: image.url, height: image.height, width: image.width, proxyURL: image.url } : null;
@@ -99,7 +108,7 @@ export class Embed {
   /** The author line. */
   public get author(): { name: string; url?: string; iconURL?: string; proxyIconURL?: string } | null {
     const { author } = this.data;
-    return author ? { name: author.name, url: author.url, iconURL: author.icon_url } : null;
+    return author ? { name: author.name, url: author.url, iconURL: author.icon_url, proxyIconURL: author.icon_url } : null;
   }
 
   /** The site a link preview came from. */
@@ -110,7 +119,7 @@ export class Embed {
   /** The footer. */
   public get footer(): { text: string; iconURL?: string; proxyIconURL?: string } | null {
     const { footer } = this.data;
-    return footer ? { text: footer.text, iconURL: footer.icon_url } : null;
+    return footer ? { text: footer.text, iconURL: footer.icon_url, proxyIconURL: footer.icon_url } : null;
   }
 
   /** The total number of characters in the embed. */

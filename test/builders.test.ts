@@ -10,6 +10,7 @@ import {
   ChannelType,
   Colors,
   ContextMenuCommandBuilder,
+  Embed,
   EmbedBuilder,
   InteractionContextType,
   ModalBuilder,
@@ -147,19 +148,66 @@ describe('EmbedBuilder', () => {
     });
   });
 
-  it('keeps images but warns once that Bisim does not show them', () => {
+  it('sends the image, the thumbnail and the author and footer icons', () => {
+    const embed = new EmbedBuilder()
+      .setTitle('Pictures')
+      .setAuthor({ name: 'Some name', url: 'https://bisim.gg', iconURL: 'https://example.com/author.png' })
+      .setFooter({ text: 'Some footer text here', iconURL: 'http://example.com/footer.png' })
+      .setImage('https://example.com/a.png')
+      .setThumbnail('https://example.com/b.png');
+    expect(embed.data.image?.url).toBe('https://example.com/a.png');
+    expect(embed.data.author?.icon_url).toBe('https://example.com/author.png');
+    expect(toBisimEmbed(embed)).toEqual({
+      title: 'Pictures',
+      author: { name: 'Some name', url: 'https://bisim.gg', iconUrl: 'https://example.com/author.png' },
+      footer: { text: 'Some footer text here', iconUrl: 'http://example.com/footer.png' },
+      image: { url: 'https://example.com/a.png' },
+      thumbnail: { url: 'https://example.com/b.png' },
+    });
+  });
+
+  it('leaves out a picture that is not an http or https link, and warns once', () => {
     const warnings: string[] = [];
     const listener = (warning: Error) => warnings.push(warning.message);
     process.on('warning', listener);
-    const embed = new EmbedBuilder().setImage('https://example.com/a.png').setThumbnail('https://example.com/b.png');
-    expect(embed.data.image?.url).toBe('https://example.com/a.png');
-    expect(toBisimEmbed(embed)).toEqual({});
+    const embed = new EmbedBuilder()
+      .setTitle('Chart')
+      .setImage('attachment://chart.png')
+      .setThumbnail(`https://example.com/${'x'.repeat(2048)}`)
+      .setFooter({ text: 'Footer', iconURL: 'data:image/png;base64,AAAA' });
+    expect(embed.data.image?.url).toBe('attachment://chart.png');
+    expect(toBisimEmbed(embed)).toEqual({ title: 'Chart', footer: { text: 'Footer' } });
     return new Promise<void>((resolve) => {
       setImmediate(() => {
         process.off('warning', listener);
-        expect(warnings.some((message) => message.includes('not shown on Bisim'))).toBe(true);
+        expect(warnings.filter((message) => message.includes('not shown on Bisim'))).toHaveLength(1);
         resolve();
       });
+    });
+  });
+
+  it('reads the pictures of an embed Bisim sends back, and sends them again', () => {
+    const embed = new Embed({
+      type: 'rich',
+      title: 'Back',
+      authorName: 'Bot',
+      authorIconUrl: 'https://example.com/author.png',
+      footerText: 'Footer',
+      footerIconUrl: 'https://example.com/footer.png',
+      imageUrl: 'https://example.com/a.png',
+      thumbnailUrl: 'https://example.com/b.png',
+      fields: [],
+    });
+    expect(embed.image?.url).toBe('https://example.com/a.png');
+    expect(embed.thumbnail?.url).toBe('https://example.com/b.png');
+    expect(embed.author?.iconURL).toBe('https://example.com/author.png');
+    expect(embed.footer?.iconURL).toBe('https://example.com/footer.png');
+    expect(toBisimEmbed(EmbedBuilder.from(embed))).toEqual({
+      title: 'Back',
+      author: { name: 'Bot', iconUrl: 'https://example.com/author.png' },
+      footer: { text: 'Footer', iconUrl: 'https://example.com/footer.png' },
+      image: { url: 'https://example.com/a.png' },
+      thumbnail: { url: 'https://example.com/b.png' },
     });
   });
 

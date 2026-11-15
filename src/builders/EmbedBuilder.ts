@@ -16,7 +16,7 @@ export interface APIEmbedField {
 export interface APIEmbedAuthor {
   name: string;
   url?: string;
-  /** Kept, but not shown on Bisim. */
+  /** The round icon before the name (an http or https link). */
   icon_url?: string;
   proxy_icon_url?: string;
 }
@@ -26,13 +26,14 @@ export interface APIEmbedAuthor {
  */
 export interface APIEmbedFooter {
   text: string;
-  /** Kept, but not shown on Bisim. */
+  /** The round icon before the text (an http or https link). */
   icon_url?: string;
   proxy_icon_url?: string;
 }
 
 /**
- * An image of an embed. Kept, but not shown on Bisim.
+ * A picture of an embed: its large image or its thumbnail. Bisim reads `url` (an http or https link); `proxy_url`,
+ * `width` and `height` are only filled on embeds Bisim sends back.
  */
 export interface APIEmbedImage {
   url: string;
@@ -43,8 +44,8 @@ export interface APIEmbedImage {
 
 /**
  * An embed, in the shape discord.js builds. Bisim shows the title, description, URL, color, timestamp,
- * author name and URL, footer text and fields; images, thumbnails and icons are kept on the builder but not
- * shown.
+ * author (name, URL and icon), footer (text and icon), fields, image and thumbnail. A picture must be an http or
+ * https link: Discord's `attachment://` is kept on the builder but not sent.
  */
 export interface APIEmbed {
   title?: string;
@@ -68,7 +69,7 @@ export interface APIEmbed {
 export interface EmbedAuthorOptions {
   name: string;
   url?: string;
-  /** Kept, but not shown on Bisim. */
+  /** The round icon before the name (an http or https link). */
   iconURL?: string;
 }
 
@@ -77,11 +78,14 @@ export interface EmbedAuthorOptions {
  */
 export interface EmbedFooterOptions {
   text: string;
-  /** Kept, but not shown on Bisim. */
+  /** The round icon before the text (an http or https link). */
   iconURL?: string;
 }
 
 const warned = new Set<string>();
+
+/** Bisim's (and Discord's) cap on an embed picture's address. */
+const PICTURE_URL_MAX = 2048;
 
 /**
  * Warns once per kind that a part of an embed is not shown on Bisim.
@@ -184,10 +188,7 @@ export class EmbedBuilder {
     checkLength(options.name, 256, ErrorCodes.EmbedAuthorName);
     const author: APIEmbedAuthor = { name: options.name };
     if (options.url) author.url = options.url;
-    if (options.iconURL) {
-      author.icon_url = options.iconURL;
-      warnEmbedPart('author icons are');
-    }
+    if (options.iconURL) author.icon_url = options.iconURL;
     this.data.author = author;
     return this;
   }
@@ -229,39 +230,30 @@ export class EmbedBuilder {
     }
     checkLength(options.text, 2048, ErrorCodes.EmbedFooterText);
     const footer: APIEmbedFooter = { text: options.text };
-    if (options.iconURL) {
-      footer.icon_url = options.iconURL;
-      warnEmbedPart('footer icons are');
-    }
+    if (options.iconURL) footer.icon_url = options.iconURL;
     this.data.footer = footer;
     return this;
   }
 
   /**
-   * Sets the image. The value is kept, but Bisim does not show embed images: a warning says so once.
+   * Sets the large image, shown below the fields.
    *
-   * @param url - The image URL, or `null` to remove it
+   * @param url - The image URL (http or https), or `null` to remove it
    */
   public setImage(url: string | null): this {
     if (url === null) delete this.data.image;
-    else {
-      this.data.image = { url };
-      warnEmbedPart('images are');
-    }
+    else this.data.image = { url };
     return this;
   }
 
   /**
-   * Sets the thumbnail. The value is kept, but Bisim does not show embed thumbnails: a warning says so once.
+   * Sets the thumbnail, the small picture beside the text.
    *
-   * @param url - The thumbnail URL, or `null` to remove it
+   * @param url - The thumbnail URL (http or https), or `null` to remove it
    */
   public setThumbnail(url: string | null): this {
     if (url === null) delete this.data.thumbnail;
-    else {
-      this.data.thumbnail = { url };
-      warnEmbedPart('thumbnails are');
-    }
+    else this.data.thumbnail = { url };
     return this;
   }
 
@@ -321,6 +313,17 @@ export class EmbedBuilder {
 }
 
 /**
+ * A picture's address as Bisim takes it: an http or https link of at most 2048 characters. Anything else (Discord's
+ * `attachment://` above all) is left out with a warning, since Bisim would refuse the whole message for it.
+ */
+function pictureURL(url: unknown): string | undefined {
+  if (typeof url !== 'string' || !url) return undefined;
+  if (/^https?:\/\/[^/?#\s]/i.test(url) && url.length <= PICTURE_URL_MAX) return url;
+  warnEmbedPart('pictures that are not http or https links are');
+  return undefined;
+}
+
+/**
  * Converts an embed (a builder, an {@link Embed} or JSON) to the nested shape Bisim's message routes take.
  * Parts Bisim does not show are left out.
  *
@@ -342,13 +345,23 @@ export function toBisimEmbed(input: unknown): Record<string, unknown> {
     const author: Record<string, string> = { name: authorName };
     const authorUrl = data.author?.url ?? (data.authorUrl as string | undefined);
     if (authorUrl) author.url = authorUrl;
+    const iconUrl = pictureURL(data.author?.icon_url ?? data.authorIconUrl);
+    if (iconUrl) author.iconUrl = iconUrl;
     out.author = author;
   }
   const footerText = data.footer?.text ?? (data.footerText as string | undefined);
-  if (footerText) out.footer = { text: footerText };
+  if (footerText) {
+    const footer: Record<string, string> = { text: footerText };
+    const iconUrl = pictureURL(data.footer?.icon_url ?? data.footerIconUrl);
+    if (iconUrl) footer.iconUrl = iconUrl;
+    out.footer = footer;
+  }
   if (data.fields?.length) {
     out.fields = data.fields.map((field) => ({ name: field.name, value: field.value, inline: Boolean(field.inline) }));
   }
-  if (data.image || data.thumbnail || (data.imageUrl as string | undefined)) warnEmbedPart('images are');
+  const image = pictureURL(data.image?.url ?? data.imageUrl);
+  if (image) out.image = { url: image };
+  const thumbnail = pictureURL(data.thumbnail?.url ?? data.thumbnailUrl);
+  if (thumbnail) out.thumbnail = { url: thumbnail };
   return out;
 }

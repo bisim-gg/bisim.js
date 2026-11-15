@@ -16,6 +16,8 @@ All notable changes to bisim.js are listed here. The format follows
   the intents, `login()` rejects with `InvalidIntents` (close code 4013) or `DisallowedIntents` (4014), and the
   client never reconnects after either; on a later reconnect it emits `shardDisconnect` with the code and the
   error instead.
+- Without `GuildMembers`, whoever is in voice or adds a reaction is still in `guild.members.cache` with their roles,
+  from the member Bisim now sends with a voice state (at login and live) and a reaction, as Discord does.
 - New events: `guildBanAdd`, `guildBanRemove`, `inviteCreate`, `inviteDelete`, `guildAuditLogEntryCreate`,
   `webhooksUpdate` (and the deprecated `webhookUpdate`), `autoModerationRuleCreate`, `autoModerationRuleUpdate`,
   `autoModerationRuleDelete`, `autoModerationActionExecution`, `emojiUpdate`, `stickerUpdate` and

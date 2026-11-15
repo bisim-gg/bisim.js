@@ -11,6 +11,7 @@ import { Events } from '../util/Events.js';
 import { type DispatchEnvelope, handlers } from './handlers.js';
 import { type GatewayFrame, GatewayConnectError, GatewayOpcodes, InternalCloseCodes, WebSocketShard } from './WebSocketShard.js';
 import { attachHidden } from '../util/internal.js';
+import { normalizeMember } from './normalize.js';
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms).unref?.());
 
@@ -388,7 +389,22 @@ export class WebSocketManager extends EventEmitter {
         tasks.push(
           client.rest.get(Routes.guildVoiceStates(guildId)).then((states) => {
             const list = Array.isArray(states) ? states : ((states as { states?: RawVoiceStateData[] })?.states ?? []);
-            for (const state of list as RawVoiceStateData[]) guild.voiceStates._add({ ...state, guildId });
+            for (const state of list as (RawVoiceStateData & { member?: Record<string, unknown>; username?: string; displayName?: string; avatarKey?: string })[]) {
+              guild.voiceStates._add({ ...state, guildId });
+              // Discord gives the member of everyone in voice: known without the Server Members intent.
+              if (state.member && !guild.members.cache.has(state.userId)) {
+                guild.members._add(
+                  normalizeMember(
+                    {
+                      ...state.member,
+                      userId: state.userId,
+                      user: { id: state.userId, username: state.username, displayName: state.displayName, avatarKey: state.avatarKey, bot: state.member.bot },
+                    },
+                    guildId,
+                  ),
+                );
+              }
+            }
           }),
         );
       }

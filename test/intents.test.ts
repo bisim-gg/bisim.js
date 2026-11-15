@@ -122,6 +122,60 @@ describe('intents', () => {
     expect(client.guilds.cache.get(GUILD_ID)!.members.cache.size).toBe(MEMBERS.length);
   });
 
+  it('knows whoever is in voice or reacts as a member without the Server Members intent (Discord gives the member)', async () => {
+    rest.on('GET /guilds/:id/voice-states', () =>
+      Response.json({
+        states: [
+          {
+            channelId: '1301',
+            userId: '700',
+            username: 'carol',
+            displayName: 'Carol',
+            avatarKey: '',
+            member: { nickname: 'Caz', roleIds: [GUILD_ID, ROLE_ID], joinedAt: '2026-07-02T00:00:00.000Z', timeoutUntil: null, bot: false },
+          },
+        ],
+        statuses: [],
+        starts: [],
+      }),
+    );
+    await login({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMessageReactions] });
+    const guild = client.guilds.cache.get(GUILD_ID)!;
+    await until(() => guild.members.cache.has('700'));
+    const carol = guild.members.cache.get('700')!;
+    expect(carol.nickname).toBe('Caz');
+    expect(carol.roles.cache.has(ROLE_ID)).toBe(true);
+    expect(carol.user.username).toBe('carol');
+
+    gateway.dispatch('VOICE_STATE_UPDATE', {
+      guildId: GUILD_ID,
+      channelId: '1301',
+      voiceState: {
+        userId: '701',
+        user: { id: '701', username: 'dave', displayName: 'Dave' },
+        member: { userId: '701', roleIds: [GUILD_ID, ROLE_ID], joinedAt: '2026-07-03T00:00:00.000Z', user: { id: '701', username: 'dave', displayName: 'Dave' } },
+      },
+    });
+    await until(() => guild.members.cache.has('701'));
+    expect(guild.members.cache.get('701')!.roles.cache.has(ROLE_ID)).toBe(true);
+    expect(guild.voiceStates.cache.get('701')?.member?.id).toBe('701');
+
+    gateway.dispatch('MESSAGE_REACTION_ADD', {
+      guildId: GUILD_ID,
+      channelId: TEXT_ID,
+      reaction: {
+        messageId: '6900',
+        channelId: TEXT_ID,
+        guildId: GUILD_ID,
+        userId: '702',
+        emoji: '👍',
+        member: { userId: '702', roleIds: [GUILD_ID], joinedAt: '2026-07-04T00:00:00.000Z', user: { id: '702', username: 'erin', displayName: 'Erin' } },
+      },
+    });
+    await until(() => guild.members.cache.has('702'));
+    expect(client.users.cache.get('702')?.username).toBe('erin');
+  });
+
   it('turns a 403 MISSING_INTENT on the member list into MissingIntent', async () => {
     await login({ intents: [GatewayIntentBits.Guilds] });
     rest.on('GET /guilds/:id/members', () =>

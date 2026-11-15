@@ -184,6 +184,10 @@ export const handlers: Record<string, DispatchHandler> = {
     if (!data) return;
     const channel = textChannel(client, data.channelId, data.guildId || d.guildId, null);
     if (!channel) return;
+    // Discord's member on a reaction in a server: the one who reacted is known without the Server Members intent.
+    const reactedIn = data.guildId || d.guildId;
+    const guild = reactedIn ? client.guilds.cache.get(reactedIn) : undefined;
+    if (guild && data.member?.user && !guild.members.cache.has(data.userId)) guild.members._add(normalizeMember(data.member, guild.id));
     const message = channel.messages.cache.get(data.messageId) ?? (hasPartial(client, Partials.Message) ? partialMessage(client, channel, data.messageId, data.guildId) : null);
     if (!message) return;
     const user = resolveUser(client, data.userId);
@@ -594,6 +598,8 @@ export const handlers: Record<string, DispatchHandler> = {
     const guild = guildOf(client, d);
     if (!guild || !d.voiceState) return;
     const raw = normalizeVoiceState(d.voiceState, d.channelId ?? null, guild.id);
+    // Discord's member on a voice state: whoever is in voice is a cached member without the Server Members intent.
+    if (d.voiceState.member && !raw.left) guild.members._add(normalizeMember({ user: d.voiceState.user, ...d.voiceState.member }, guild.id));
     const existing = guild.voiceStates.cache.get(raw.userId);
     const old = existing ? existing._clone() : new VoiceState(guild, { userId: raw.userId });
     const state = guild.voiceStates._add(raw);

@@ -65,7 +65,17 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
 Answer with `update()`, `deferUpdate()` or `reply()`, as with [buttons](./buttons.md).
 
-::: info Not on Bisim yet
-Preselected values for the user, role and channel menus (`setDefaultUsers()` and friends) throw a
-`BisimjsError`.
-:::
+## Preselected values
+
+User, role, mentionable and channel menus can open with values already picked. Their count must be 0, or
+between the menu's minimum and maximum:
+
+```js
+const users = new UserSelectMenuBuilder().setCustomId('reviewers').setMaxValues(3).setDefaultUsers(interaction.user.id);
+const roles = new RoleSelectMenuBuilder().setCustomId('roles').addDefaultRoles(['123456789012345678']);
+const channels = new ChannelSelectMenuBuilder().setCustomId('log').setDefaultChannels(interaction.channelId);
+const either = new MentionableSelectMenuBuilder().setCustomId('who').addDefaultUsers(userId).addDefaultRoles(roleId);
+```
+
+A string menu marks its picked options with `setDefault(true)` instead. On a message the bot reads back, a
+menu's `defaultValues` lists them as `{ id, type }`.

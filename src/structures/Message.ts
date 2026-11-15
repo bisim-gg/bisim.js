@@ -19,7 +19,7 @@ import { Embed } from './Embed.js';
 import { Sticker } from './Emoji.js';
 import type { Guild } from './Guild.js';
 import type { GuildMember } from './GuildMember.js';
-import { MessageMentions } from './MessageMentions.js';
+import { type MessageMentionLists, MessageMentions } from './MessageMentions.js';
 import { type MessageEditOptions, MessagePayload, type MessageReplyOptions } from './MessagePayload.js';
 import type { MessageReaction } from './MessageReaction.js';
 import { Poll } from './Poll.js';
@@ -228,14 +228,21 @@ export class Message<InGuild extends boolean = boolean> extends Base {
       }
       this.interactionMetadata = this.interaction;
     }
-    if ('content' in data || data.author) {
+    if (data.member && data.author && !this.webhookId) {
+      // The author's membership, sent with the message: cached, as discord.js does, so `message.member` works
+      // without the member list.
+      const guild = this.guild;
+      if (guild) guild.members._add({ ...data.member, guildId: guild.id, userId: data.member.userId || data.author.id, user: data.author });
+    }
+    const lists = mentionListsOf(data);
+    if ('content' in data || data.author || lists) {
       this.stickers = new Collection();
       for (const match of (this.content ?? '').matchAll(STICKER_TOKEN)) {
         const id = match[1]!;
         const known = this.guild?.stickers.cache.get(id);
         this.stickers.set(id, known ?? new Sticker(this.client, { id }));
       }
-      this.mentions = new MessageMentions(this, this._referencedMessage?.author ?? null);
+      this.mentions = new MessageMentions(this, this._referencedMessage?.author ?? null, lists);
     }
   }
 
@@ -484,14 +491,23 @@ export class Message<InGuild extends boolean = boolean> extends Base {
     return notSupported('Threads');
   }
 
-  /** Not on Bisim: suppressing embeds. */
-  public suppressEmbeds(_suppress = true): Promise<Message> {
-    return notSupported('Suppressing embeds');
+  /**
+   * Hides or shows the message's embeds (the bot must have written it). With them hidden, `embeds` is empty.
+   *
+   * @param suppress - Whether to hide them
+   */
+  public suppressEmbeds(suppress = true): Promise<Message> {
+    const flags = new MessageFlagsBitField(this.flags.bitfield & MessageFlags.SuppressEmbeds);
+    if (suppress) flags.add(MessageFlags.SuppressEmbeds);
+    else flags.remove(MessageFlags.SuppressEmbeds);
+    return this.edit({ flags: flags.bitfield });
   }
 
-  /** Not on Bisim: removing attachments. */
+  /**
+   * Removes every file from the message (the bot must have written it).
+   */
   public removeAttachments(): Promise<Message> {
-    return notSupported('Removing attachments from a message');
+    return this.edit({ attachments: [] });
   }
 
   /**
@@ -568,6 +584,16 @@ export class Message<InGuild extends boolean = boolean> extends Base {
       reference: this.reference,
     };
   }
+}
+
+/**
+ * The mention lists Bisim sent with a message (`mentions` on events, `mentionIds` on REST, and the roles and
+ * `@everyone` on both), or `null` when it sent none and the text has to be read instead.
+ */
+function mentionListsOf(data: Partial<RawMessageData>): MessageMentionLists | null {
+  const sent = data.mentions !== undefined || data.mentionIds !== undefined || data.mentionRoleIds !== undefined || data.mentionEveryone !== undefined;
+  if (!sent) return null;
+  return { users: data.mentions, userIds: data.mentionIds, roleIds: data.mentionRoleIds ?? [], everyone: data.mentionEveryone ?? false };
 }
 
 /**

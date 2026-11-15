@@ -1,7 +1,7 @@
 import type { Client } from '../client/Client.js';
 import { ReactionUserManager } from '../managers/ReactionUserManager.js';
+import { Routes } from '../rest/Routes.js';
 import type { RawReactionData } from '../types/raw.js';
-import { notSupported } from '../util/Util.js';
 import { type GuildEmoji, ReactionEmoji, emojiFromBisim } from './Emoji.js';
 import type { Message } from './Message.js';
 import type { User } from './User.js';
@@ -77,11 +77,14 @@ export class MessageReaction {
   }
 
   /**
-   * Not on Bisim: removing every reaction of one emoji. Use `message.reactions.removeAll()` or
-   * `reaction.users.remove(user)`.
+   * Removes every reaction of this emoji from the message (needs Manage Messages). The cache follows with the
+   * `messageReactionRemoveEmoji` event.
    */
-  public remove(): Promise<MessageReaction> {
-    return notSupported('Removing every reaction of one emoji');
+  public async remove(): Promise<MessageReaction> {
+    await this.client.rest.delete(
+      Routes.channelMessageReactionAll(this.message.channelId, this.message.id, encodeURIComponent(this._emojiText)),
+    );
+    return this;
   }
 
   /**

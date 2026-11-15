@@ -166,7 +166,7 @@ describe('EmbedBuilder', () => {
     });
   });
 
-  it('leaves out a picture that is not an http or https link, and warns once', () => {
+  it('leaves out a picture that is neither an http or https link nor a file of the message, and warns once per kind', () => {
     const warnings: string[] = [];
     const listener = (warning: Error) => warnings.push(warning.message);
     process.on('warning', listener);
@@ -180,7 +180,7 @@ describe('EmbedBuilder', () => {
     return new Promise<void>((resolve) => {
       setImmediate(() => {
         process.off('warning', listener);
-        expect(warnings.filter((message) => message.includes('not shown on Bisim'))).toHaveLength(1);
+        expect(warnings.filter((message) => message.includes('not shown on Bisim'))).toHaveLength(2);
         resolve();
       });
     });
@@ -332,8 +332,11 @@ describe('file resolution', () => {
     await expect(MessagePayload.resolveFile('./does-not-exist.png')).rejects.toThrow(/could not be found/);
   });
 
-  it('refuses files where Bisim takes none', async () => {
-    const payload = MessagePayload.create({ id: '1' }, { content: 'x', files: [Buffer.from('a')] }, {}, 'interaction');
-    await expect(payload.resolveFiles()).rejects.toThrow(/Files in interaction replies: not supported on Bisim/);
+  it('reads files for every kind of message, interaction answers and webhooks included', async () => {
+    for (const kind of ['interaction', 'webhook', 'edit'] as const) {
+      const payload = MessagePayload.create({ id: '1' }, { content: 'x', files: [{ attachment: Buffer.from('a'), name: 'a.txt' }] }, {}, kind);
+      await payload.resolveFiles();
+      expect(payload.files?.map((file) => file.name)).toEqual(['a.txt']);
+    }
   });
 });

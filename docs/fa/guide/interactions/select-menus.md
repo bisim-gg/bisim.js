@@ -65,7 +65,17 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
 مثل [دکمه‌ها](./buttons.md)، با `update()`، `deferUpdate()` یا `reply()` پاسخ دهید.
 
-::: info هنوز در بی‌سیم نیست
-مقدار از پیش انتخاب‌شده برای منوهای کاربر، نقش و کانال (`setDefaultUsers()` و مانند آن) یک `BisimjsError`
-می‌دهد.
-:::
+## مقدارهای از پیش انتخاب‌شده
+
+منوهای کاربر، نقش، اشاره‌پذیر و کانال می‌توانند با مقدارهایی که از پیش انتخاب شده‌اند باز شوند. تعدادشان باید
+صفر باشد، یا بین کمینه و بیشینهٔ منو:
+
+```js
+const users = new UserSelectMenuBuilder().setCustomId('reviewers').setMaxValues(3).setDefaultUsers(interaction.user.id);
+const roles = new RoleSelectMenuBuilder().setCustomId('roles').addDefaultRoles(['123456789012345678']);
+const channels = new ChannelSelectMenuBuilder().setCustomId('log').setDefaultChannels(interaction.channelId);
+const either = new MentionableSelectMenuBuilder().setCustomId('who').addDefaultUsers(userId).addDefaultRoles(roleId);
+```
+
+منوی متنی گزینه‌های انتخاب‌شده‌اش را به جای این با `setDefault(true)` مشخص می‌کند. روی پیامی که ربات دوباره
+می‌خواند، `defaultValues` هر منو آن‌ها را به شکل `{ id, type }` فهرست می‌کند.

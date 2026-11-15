@@ -67,6 +67,18 @@ function isMessageData(data: unknown): data is RawMessageData {
   return Boolean(data && typeof data === 'object' && 'id' in data && 'channelId' in data);
 }
 
+/** The files a message the interaction answered with has now, when bisim.js knows them. */
+function knownAttachments(host: ResponseHost, id: string): { id: string; name: string }[] | null {
+  if (id === '@original' && host._replyMessage?.attachments) {
+    return host._replyMessage.attachments.map((attachment) => ({ id: attachment.id, name: attachment.fileName }));
+  }
+  const messageId = id === '@original' ? host._replyMessage?.id : id;
+  const channel = host.channel as TextBasedChannel | null;
+  const cached = messageId ? channel?.messages?.cache.get(messageId) : undefined;
+  if (cached && !cached.partial) return [...cached.attachments.values()].map((attachment) => ({ id: attachment.id, name: attachment.name }));
+  return null;
+}
+
 /**
  * The answering methods every repliable interaction has: `reply`, `deferReply`, `editReply`, `deleteReply`,
  * `fetchReply`, `followUp`, and for components `update` and `deferUpdate`. They are applied to the
@@ -119,6 +131,7 @@ export class InteractionResponses {
     const data = await this.client.rest.post(Routes.interactionCallback(this.id, this.token), {
       auth: false,
       body: { type: InteractionResponseType.ChannelMessageWithSource, data: body },
+      files: payload.files?.length ? payload.files : undefined,
     });
     this.replied = true;
     this.ephemeral = Boolean(((body.flags as number | undefined) ?? 0) & MessageFlags.Ephemeral);
@@ -158,12 +171,13 @@ export class InteractionResponses {
     const target = (resolved as InteractionEditReplyOptions).message;
     const id = target === undefined ? '@original' : typeof target === 'string' ? target : target.id;
     const payload = MessagePayload.create(this, options as Record<string, unknown>, {}, 'edit');
+    payload.existingAttachments = knownAttachments(this, id);
     payload.resolveBody();
     await payload.resolveFiles();
     const body = { ...payload.body! };
-    delete body.flags;
+    const files = payload.files?.length ? payload.files : undefined;
     try {
-      const data = (await this.client.rest.patch(Routes.interactionMessage(this.id, this.token, id), { auth: false, body })) as RawMessageData;
+      const data = (await this.client.rest.patch(Routes.interactionMessage(this.id, this.token, id), { auth: false, body, files })) as RawMessageData;
       this.replied = true;
       if (id === '@original') this._deferralFilled = true;
       return isMessageData(data) ? toMessage(this, data) : this.fetchReply(id);
@@ -173,6 +187,7 @@ export class InteractionResponses {
         const data = (await this.client.rest.post(Routes.interactionFollowup(this.id, this.token), {
           auth: false,
           body: this.ephemeral ? { ...body, flags: MessageFlags.Ephemeral } : body,
+          files,
         })) as RawMessageData;
         this._deferralFilled = true;
         this.replied = true;
@@ -180,7 +195,7 @@ export class InteractionResponses {
         return toMessage(this, data);
       }
       if (this._replyMessage && !this.ephemeral) {
-        const data = (await this.client.rest.patch(Routes.channelMessage(this._replyMessage.channelId, this._replyMessage.id), { body })) as RawMessageData;
+        const data = (await this.client.rest.patch(Routes.channelMessage(this._replyMessage.channelId, this._replyMessage.id), { body, files })) as RawMessageData;
         return toMessage(this, data);
       }
       throw error;
@@ -217,7 +232,11 @@ export class InteractionResponses {
     const payload = MessagePayload.create(this, options as Record<string, unknown>, {}, 'interaction');
     payload.resolveBody();
     await payload.resolveFiles();
-    const data = (await this.client.rest.post(Routes.interactionFollowup(this.id, this.token), { auth: false, body: payload.body })) as RawMessageData;
+    const data = (await this.client.rest.post(Routes.interactionFollowup(this.id, this.token), {
+      auth: false,
+      body: payload.body,
+      files: payload.files?.length ? payload.files : undefined,
+    })) as RawMessageData;
     return toMessage(this, data);
   }
 
@@ -253,11 +272,15 @@ export class InteractionResponses {
   public async update(this: ResponseHost, options: string | MessagePayload | InteractionUpdateOptions): Promise<InteractionResponse | Message | InteractionCallbackResponse> {
     mustBeUnanswered(this);
     const payload = MessagePayload.create(this, options as Record<string, unknown>, {}, 'edit');
+    if (this.message && !this.message.partial) {
+      payload.existingAttachments = [...this.message.attachments.values()].map((attachment) => ({ id: attachment.id, name: attachment.name }));
+    }
     payload.resolveBody();
     await payload.resolveFiles();
     const data = await this.client.rest.post(Routes.interactionCallback(this.id, this.token), {
       auth: false,
       body: { type: InteractionResponseType.UpdateMessage, data: payload.body },
+      files: payload.files?.length ? payload.files : undefined,
     });
     this.replied = true;
     this._deferralFilled = true;

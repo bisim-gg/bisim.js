@@ -6,23 +6,41 @@ import type { RESTOptions } from '../rest/types.js';
 import type { RawMessageData, RawWebhookData } from '../types/raw.js';
 import { WebhookType } from '../util/Enums.js';
 import { SnowflakeUtil } from '../util/SnowflakeUtil.js';
-import { cdnURL, notSupported } from '../util/Util.js';
+import { cdnURL } from '../util/Util.js';
 import type { TextChannel } from './channels/TextChannel.js';
 import { Message } from './Message.js';
-import { MessagePayload, type WebhookMessageCreateOptions } from './MessagePayload.js';
+import {
+  type MessageMentionOptions,
+  MessagePayload,
+  type WebhookMessageCreateOptions,
+  type WebhookMessageEditOptions,
+} from './MessagePayload.js';
 import type { User } from './User.js';
 import { attachHidden, dateFrom } from '../util/internal.js';
+import { type ImageResolvable, imageForm } from '../util/images.js';
 
 /**
  * Options for editing a webhook.
  */
 export interface WebhookEditOptions {
+  /** The new name. */
   name?: string;
-  /** Not on Bisim through the API. */
-  avatar?: unknown;
+  /** The picture its messages show: a Buffer, a path, a URL or a `data:` URI; `null` takes it off. */
+  avatar?: ImageResolvable | null;
   /** Moves the webhook to another channel. */
   channel?: TextChannel | string;
+  /** Why (for the audit log). */
   reason?: string;
+}
+
+/**
+ * Options for fetching a message a webhook posted.
+ */
+export interface WebhookFetchMessageOptions {
+  /** Whether to cache the message (`true` by default). */
+  cache?: boolean;
+  /** Not on Bisim: threads. */
+  threadId?: string;
 }
 
 /**
@@ -36,20 +54,56 @@ export function parseWebhookURL(url: string): { id: string; token: string; api: 
   return { api: match[1]!, id: match[2]!, token: match[3]! };
 }
 
+interface WebhookTarget {
+  id: string;
+}
+
 async function executeWebhook(
   rest: REST,
-  id: string,
+  target: WebhookTarget,
   token: string,
   options: string | MessagePayload | WebhookMessageCreateOptions,
 ): Promise<RawMessageData> {
-  const payload = MessagePayload.create({ id }, options as Record<string, unknown>, {}, 'webhook');
+  const payload = MessagePayload.create(target, options as Record<string, unknown>, {}, 'webhook');
   payload.resolveBody();
   await payload.resolveFiles();
-  return (await rest.post(Routes.webhook(id, token), {
+  return (await rest.post(Routes.webhook(target.id, token), {
     auth: false,
     body: payload.body,
+    files: payload.files?.length ? payload.files : undefined,
     query: { wait: true },
   })) as RawMessageData;
+}
+
+const messageIdOf = (message: string | { id: string }): string => (typeof message === 'string' ? message : message.id);
+
+async function fetchWebhookMessage(rest: REST, id: string, token: string, message: string | { id: string }, threadId?: string): Promise<RawMessageData> {
+  if (threadId) throw new BisimjsError(ErrorCodes.NotSupported, 'Threads');
+  return (await rest.get(Routes.webhookMessage(id, token, messageIdOf(message)), { auth: false })) as RawMessageData;
+}
+
+async function editWebhookMessage(
+  rest: REST,
+  target: WebhookTarget,
+  token: string,
+  message: string | { id: string },
+  options: string | MessagePayload | WebhookMessageEditOptions,
+  existing: readonly { id: string; name: string }[] | null,
+): Promise<RawMessageData> {
+  const payload = MessagePayload.create(target, options as Record<string, unknown>, {}, 'edit');
+  payload.existingAttachments = existing;
+  payload.resolveBody();
+  await payload.resolveFiles();
+  return (await rest.patch(Routes.webhookMessage(target.id, token, messageIdOf(message)), {
+    auth: false,
+    body: payload.body,
+    files: payload.files?.length ? payload.files : undefined,
+  })) as RawMessageData;
+}
+
+async function deleteWebhookMessage(rest: REST, id: string, token: string, message: string | { id: string }, threadId?: string): Promise<void> {
+  if (threadId) throw new BisimjsError(ErrorCodes.NotSupported, 'Threads');
+  await rest.delete(Routes.webhookMessage(id, token, messageIdOf(message)), { auth: false });
 }
 
 /**
@@ -132,15 +186,24 @@ export class Webhook {
   }
 
   /**
-   * Sends a message through the webhook (text and embeds; `username` sets the name for this message).
+   * Sends a message through the webhook: text, embeds and files (`username` sets the name for this message).
    *
    * @param options - The message
    */
   public async send(options: string | MessagePayload | WebhookMessageCreateOptions): Promise<Message> {
-    if (!this.token) throw new BisimjsError(ErrorCodes.WebhookTokenUnavailable);
-    const data = await executeWebhook(this.client.rest, this.id, this.token, options);
+    const data = await executeWebhook(this.client.rest, this, this.requireToken(), options);
+    return this.toMessage(data);
+  }
+
+  /** The token, or the error discord.js throws without one. */
+  private requireToken(): string {
+    if (this.token) return this.token;
+    throw new BisimjsError(ErrorCodes.WebhookTokenUnavailable);
+  }
+
+  private toMessage(data: RawMessageData, cache = true): Message {
     const channel = this.channel;
-    if (channel) return channel.messages._add({ guildId: this.guildId, ...data });
+    if (channel) return channel.messages._add({ guildId: this.guildId, ...data }, cache);
     return new Message(this.client, { guildId: this.guildId, ...data });
   }
 
@@ -150,26 +213,39 @@ export class Webhook {
    * @param body - Slack's message body
    */
   public async sendSlackMessage(body: unknown): Promise<boolean> {
-    if (!this.token) throw new BisimjsError(ErrorCodes.WebhookTokenUnavailable);
-    await this.client.rest.post(`${Routes.webhook(this.id, this.token)}/slack`, { auth: false, body });
+    await this.client.rest.post(`${Routes.webhook(this.id, this.requireToken())}/slack`, { auth: false, body });
     return true;
   }
 
   /**
-   * Edits the webhook (its name, or its channel).
+   * Edits the webhook: its name, its channel, or its picture (needs Manage Webhooks).
    *
    * @param options - What to change
    */
   public async edit(options: WebhookEditOptions): Promise<Webhook> {
-    if (options.avatar !== undefined && options.avatar !== null) notSupported('Webhook avatars through the API');
     const body: Record<string, unknown> = {};
     if (options.name !== undefined) body.name = options.name;
     if (options.channel !== undefined) body.channelId = typeof options.channel === 'string' ? options.channel : options.channel.id;
-    const data = (await this.client.rest.patch(Routes.webhook(this.id), { body, reason: options.reason })) as RawWebhookData;
-    this.name = data.name;
-    this.channelId = data.channelId;
-    this.avatar = data.avatarKey ?? null;
+    if (Object.keys(body).length) {
+      const data = (await this.client.rest.patch(Routes.webhook(this.id), { body, reason: options.reason })) as RawWebhookData;
+      this.applyData(data);
+    }
+    if (options.avatar === null) {
+      this.applyData((await this.client.rest.delete(Routes.webhookAvatar(this.id), { reason: options.reason })) as RawWebhookData);
+    } else if (options.avatar !== undefined) {
+      const form = await imageForm(options.avatar);
+      const data = (await this.client.rest.post(Routes.webhookAvatar(this.id), { body: form, passThroughBody: true, reason: options.reason })) as RawWebhookData;
+      this.applyData(data);
+    }
     return this;
+  }
+
+  private applyData(data: RawWebhookData | undefined): void {
+    if (!data || typeof data !== 'object') return;
+    if (data.name !== undefined) this.name = data.name;
+    if (data.channelId !== undefined) this.channelId = data.channelId;
+    if ('avatarKey' in data) this.avatar = data.avatarKey ?? null;
+    if (data.token) this.token = data.token;
   }
 
   /**
@@ -181,19 +257,41 @@ export class Webhook {
     await this.client.rest.delete(Routes.webhook(this.id), { reason });
   }
 
-  /** Not on Bisim yet: fetching past webhook messages. */
-  public fetchMessage(_message: string): Promise<never> {
-    return notSupported('Fetching webhook messages');
+  /**
+   * Fetches a message this webhook posted.
+   *
+   * @param message - The message's id
+   * @param options - Whether to cache it
+   */
+  public async fetchMessage(message: string | { id: string }, options: WebhookFetchMessageOptions = {}): Promise<Message> {
+    const data = await fetchWebhookMessage(this.client.rest, this.id, this.requireToken(), message, options.threadId);
+    return this.toMessage(data, options.cache ?? true);
   }
 
-  /** Not on Bisim yet: editing past webhook messages. */
-  public editMessage(_message: string, _options: unknown): Promise<never> {
-    return notSupported('Editing webhook messages');
+  /**
+   * Edits a message this webhook posted: its text, embeds and files (`attachments` lists the files it keeps).
+   *
+   * @param message - The message or its id
+   * @param options - The new content
+   */
+  public async editMessage(message: string | { id: string }, options: string | MessagePayload | WebhookMessageEditOptions): Promise<Message> {
+    const known = this.channel?.messages.cache.get(messageIdOf(message));
+    const existing = known && !known.partial ? [...known.attachments.values()].map((attachment) => ({ id: attachment.id, name: attachment.name })) : null;
+    const data = await editWebhookMessage(this.client.rest, this, this.requireToken(), message, options, existing);
+    return this.toMessage(data);
   }
 
-  /** Not on Bisim yet: deleting past webhook messages through the token. */
-  public deleteMessage(_message: string): Promise<never> {
-    return notSupported('Deleting webhook messages through the token');
+  /**
+   * Deletes a message this webhook posted.
+   *
+   * @param message - The message or its id
+   * @param threadId - Not on Bisim: threads
+   */
+  public async deleteMessage(message: string | { id: string }, threadId?: string): Promise<void> {
+    await deleteWebhookMessage(this.client.rest, this.id, this.requireToken(), message, threadId);
+    const cached = this.channel?.messages.cache.get(messageIdOf(message));
+    if (cached) cached.deleted = true;
+    this.channel?.messages.cache.delete(messageIdOf(message));
   }
 
   /** Whether a user made this webhook (always `true` on Bisim). */
@@ -223,8 +321,8 @@ export class Webhook {
 export interface WebhookClientOptions {
   /** REST options, for example `{ api: 'http://localhost:3000/api' }`. */
   rest?: Partial<RESTOptions>;
-  /** Accepted for compatibility. */
-  allowedMentions?: unknown;
+  /** Which mentions ping, for every message this client sends (see {@link MessageMentionOptions}). */
+  allowedMentions?: MessageMentionOptions;
 }
 
 /**
@@ -279,7 +377,7 @@ export class WebhookClient {
    * @param options - The message
    */
   public send(options: string | MessagePayload | WebhookMessageCreateOptions): Promise<RawMessageData> {
-    return executeWebhook(this.rest, this.id, this.token, options);
+    return executeWebhook(this.rest, this, this.token, options);
   }
 
   /**
@@ -292,19 +390,34 @@ export class WebhookClient {
     return true;
   }
 
-  /** Not on Bisim yet. */
-  public fetchMessage(_message: string): Promise<never> {
-    return notSupported('Fetching webhook messages');
+  /**
+   * Fetches a message this webhook posted, as Bisim returned it.
+   *
+   * @param message - The message's id
+   * @param options - Not on Bisim: threads
+   */
+  public fetchMessage(message: string | { id: string }, options: { threadId?: string } = {}): Promise<RawMessageData> {
+    return fetchWebhookMessage(this.rest, this.id, this.token, message, options.threadId);
   }
 
-  /** Not on Bisim yet. */
-  public editMessage(_message: string, _options: unknown): Promise<never> {
-    return notSupported('Editing webhook messages');
+  /**
+   * Edits a message this webhook posted, and resolves with it as Bisim returned it.
+   *
+   * @param message - The message or its id
+   * @param options - The new content
+   */
+  public editMessage(message: string | { id: string }, options: string | MessagePayload | WebhookMessageEditOptions): Promise<RawMessageData> {
+    return editWebhookMessage(this.rest, this, this.token, message, options, null);
   }
 
-  /** Not on Bisim yet. */
-  public deleteMessage(_message: string): Promise<never> {
-    return notSupported('Deleting webhook messages through the token');
+  /**
+   * Deletes a message this webhook posted.
+   *
+   * @param message - The message or its id
+   * @param threadId - Not on Bisim: threads
+   */
+  public deleteMessage(message: string | { id: string }, threadId?: string): Promise<void> {
+    return deleteWebhookMessage(this.rest, this.id, this.token, message, threadId);
   }
 
   /**

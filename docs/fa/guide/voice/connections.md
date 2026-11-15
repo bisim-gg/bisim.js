@@ -145,3 +145,18 @@ connection?.destroy();
 ```js
 await voiceChannel.sendSoundboardSound({ soundId: '123456789012345678' });
 ```
+
+صداهای سرور در `guild.soundboardSounds` هستند (با `fetch()` پرش کنید)، و رویدادهای
+`GuildSoundboardSoundCreate`، `GuildSoundboardSoundUpdate` و `GuildSoundboardSoundDelete` آن را به‌روز نگه
+می‌دارند. هر بار که کسی صدایی پخش کند، `VoiceChannelEffectSend` یک `VoiceChannelEffect` با `soundId`،
+`soundVolume`، `userId` و `channel` می‌آورد.
+
+## وضعیت کانال
+
+ربات وقتی در تماس است و دسترسی Set Voice Channel Status را دارد، می‌تواند خطی را که زیر نام کانال دیده می‌شود
+تنظیم کند:
+
+```js
+await voiceChannel.setStatus('Now playing: lo-fi beats');
+await voiceChannel.setStatus(''); // clears it
+```

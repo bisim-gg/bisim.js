@@ -84,6 +84,11 @@ await interaction.reply('Working on it...');
 await interaction.followUp('One more thing.');
 ```
 
+After `deferReply()`, the first `followUp()` takes the place of the "thinking" message, as on Discord, and
+keeps its visibility; later ones are new messages. Answers and followups take files, embeds and components
+like `channel.send()`, and a poll in a new message: `reply({ poll })` or `followUp({ poll })`, never ephemeral,
+sent on its own, and not as the followUp that fills a deferral.
+
 ### Fetch and delete
 
 ```js

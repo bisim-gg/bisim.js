@@ -1,11 +1,16 @@
 import type { Client } from '../client/Client.js';
 import { createInteraction } from '../interactions/createInteraction.js';
+import { AutoModerationActionExecution, AutoModerationRule, autoModerationRulesOf } from '../structures/AutoModeration.js';
 import type { TextBasedChannel } from '../structures/channels/index.js';
 import { GuildChannel } from '../structures/channels/GuildChannel.js';
 import { emojiFromBisim } from '../structures/Emoji.js';
 import type { Guild } from '../structures/Guild.js';
+import { GuildAuditLogsEntry } from '../structures/GuildAuditLogs.js';
+import { GuildBan } from '../structures/GuildBan.js';
 import { GuildMember } from '../structures/GuildMember.js';
+import { Invite } from '../structures/Invite.js';
 import { Message } from '../structures/Message.js';
+import { VoiceChannelEffect } from '../structures/SoundboardSound.js';
 import type { MessageReaction } from '../structures/MessageReaction.js';
 import { presenceFromBisim } from '../structures/Presence.js';
 import { Typing } from '../structures/Typing.js';
@@ -16,13 +21,17 @@ import { Collection } from '../util/Collection.js';
 import { Partials, ReactionType } from '../util/Enums.js';
 import { Events } from '../util/Events.js';
 import {
+  normalizeAuditLogEntry,
+  normalizeChannel,
   normalizeChannelUpdate,
   normalizeEmoji,
   normalizeGuildUpdate,
+  normalizeInvite,
   normalizeMember,
   normalizeMessage,
   normalizePresence,
   normalizeRole,
+  normalizeSound,
   normalizeUser,
   normalizeVoiceState,
 } from './normalize.js';
@@ -70,6 +79,32 @@ function resolveUser(client: Client<true>, userId: string): User | null {
 function guildOf(client: Client<true>, d: DispatchEnvelope, inner?: { guildId?: string }): Guild | null {
   const id = d.guildId || inner?.guildId;
   return id ? (client.guilds.cache.get(id) ?? null) : null;
+}
+
+/** Whether the deprecated `webhookUpdate` event has warned once already. */
+let webhookUpdateWarned = false;
+
+/** The AutoMod rule events: the rule is kept per server, so an update can hand out the old one. */
+function autoModerationRuleEvent(client: Client<true>, d: DispatchEnvelope, kind: 'create' | 'update' | 'delete'): void {
+  const data = d.automodRule;
+  const guild = guildOf(client, d, data);
+  if (!guild || !data?.id) return;
+  const rules = autoModerationRulesOf(guild);
+  const existing = rules.get(data.id);
+  if (kind === 'delete') {
+    rules.delete(data.id);
+    client.emit(Events.AutoModerationRuleDelete, existing ?? new AutoModerationRule(client, data, guild));
+    return;
+  }
+  if (kind === 'update' && existing) {
+    const old = existing._update(data);
+    client.emit(Events.AutoModerationRuleUpdate, old, existing);
+    return;
+  }
+  const rule = new AutoModerationRule(client, data, guild);
+  rules.set(rule.id, rule);
+  if (kind === 'update') client.emit(Events.AutoModerationRuleUpdate, null, rule);
+  else client.emit(Events.AutoModerationRuleCreate, rule);
 }
 
 /**
@@ -189,6 +224,21 @@ export const handlers: Record<string, DispatchHandler> = {
     client.emit(Events.MessageReactionRemoveAll, message, removed);
   },
 
+  MESSAGE_REACTION_REMOVE_EMOJI(client, d) {
+    const data = d.reactionRemoveEmoji;
+    if (!data?.emoji) return;
+    const channel = textChannel(client, data.channelId, data.guildId || d.guildId, null);
+    if (!channel) return;
+    const message = channel.messages.cache.get(data.messageId) ?? (hasPartial(client, Partials.Message) ? partialMessage(client, channel, data.messageId, data.guildId) : null);
+    if (!message) return;
+    const parsed = emojiFromBisim(data.emoji);
+    const key = parsed.id ?? parsed.name;
+    const reaction = message.reactions.cache.get(key) ?? (hasPartial(client, Partials.Reaction) ? message.reactions._add({ emoji: data.emoji, count: 0, me: false }) : null);
+    if (!reaction) return;
+    message.reactions.cache.delete(key);
+    client.emit(Events.MessageReactionRemoveEmoji, reaction);
+  },
+
   MESSAGE_POLL_VOTE(client, d) {
     const data = d.pollVote;
     if (!data) return;
@@ -286,6 +336,105 @@ export const handlers: Record<string, DispatchHandler> = {
     client.emit(Events.ChannelUpdate, old, channel);
   },
 
+  // A GUILD_RESYNC follows each of these two (people's clients learn of the channel that way), and the server
+  // refresh it starts compares the channels too: whichever comes first emits, the other stays quiet.
+  CHANNEL_CREATE(client, d) {
+    if (!d.channelUpdate?.id) return;
+    const raw = normalizeChannel(d.channelUpdate, d.guildId);
+    const guild = raw.guildId ? client.guilds.cache.get(raw.guildId) : undefined;
+    if (!guild) return;
+    const known = client.channels.cache.has(raw.id);
+    const channel = guild.channels._add(raw);
+    if (known) return;
+    client.ws._channelCreated(channel.id);
+    client.emit(Events.ChannelCreate, channel);
+  },
+
+  CHANNEL_DELETE(client, d) {
+    const id = d.channelUpdate?.id || d.channelId;
+    if (!id) return;
+    const channel = client.channels.cache.get(id);
+    if (!(channel instanceof GuildChannel)) return;
+    client.channels._remove(id);
+    client.emit(Events.ChannelDelete, channel);
+  },
+
+  WEBHOOKS_UPDATE(client, d) {
+    const channelId = d.webhooksUpdate?.channelId || d.channelId;
+    const channel = channelId ? client.channels.cache.get(channelId) : undefined;
+    if (!(channel instanceof GuildChannel)) return;
+    client.emit(Events.WebhooksUpdate, channel as never);
+    if (client.emit('webhookUpdate', channel as never) && !webhookUpdateWarned) {
+      webhookUpdateWarned = true;
+      process.emitWarning('The webhookUpdate event is deprecated: listen to webhooksUpdate instead.', 'DeprecationWarning');
+    }
+  },
+
+  GUILD_BAN_ADD(client, d) {
+    const data = d.guildBan;
+    const guild = guildOf(client, d, data);
+    if (!guild || !data?.user?.id) return;
+    const user = normalizeUser(data.user);
+    const ban = guild.bans._add({ guildId: guild.id, userId: user.id, user });
+    client.emit(Events.GuildBanAdd, ban);
+  },
+
+  GUILD_BAN_REMOVE(client, d) {
+    const data = d.guildBan;
+    const guild = guildOf(client, d, data);
+    if (!guild || !data?.user?.id) return;
+    const user = normalizeUser(data.user);
+    const cached = guild.bans.cache.get(user.id);
+    const ban = cached ?? new GuildBan(client, { guildId: guild.id, userId: user.id, user }, guild);
+    if (cached) cached._patch({ user });
+    guild.bans.cache.delete(user.id);
+    client.emit(Events.GuildBanRemove, ban);
+  },
+
+  INVITE_CREATE(client, d) {
+    const data = d.invite;
+    const guild = guildOf(client, d, data);
+    if (!guild || !data?.code) return;
+    const invite = guild.invites._add(normalizeInvite(data));
+    client.emit(Events.InviteCreate, invite);
+  },
+
+  INVITE_DELETE(client, d) {
+    const data = d.inviteDelete;
+    const guild = guildOf(client, d, data);
+    if (!guild || !data?.code) return;
+    const invite = guild.invites.cache.get(data.code) ?? new Invite(client, { code: data.code, guildId: guild.id, channelId: data.channelId || null });
+    guild.invites.cache.delete(data.code);
+    client.emit(Events.InviteDelete, invite);
+  },
+
+  GUILD_AUDIT_LOG_ENTRY_CREATE(client, d) {
+    const data = d.auditLogEntry;
+    const guild = guildOf(client, d, data);
+    if (!guild || !data?.id) return;
+    const entry = new GuildAuditLogsEntry(guild, normalizeAuditLogEntry(data));
+    client.emit(Events.GuildAuditLogEntryCreate, entry, guild);
+  },
+
+  AUTO_MODERATION_RULE_CREATE(client, d) {
+    autoModerationRuleEvent(client, d, 'create');
+  },
+
+  AUTO_MODERATION_RULE_UPDATE(client, d) {
+    autoModerationRuleEvent(client, d, 'update');
+  },
+
+  AUTO_MODERATION_RULE_DELETE(client, d) {
+    autoModerationRuleEvent(client, d, 'delete');
+  },
+
+  AUTO_MODERATION_ACTION_EXECUTION(client, d) {
+    const data = d.automodAction;
+    const guild = guildOf(client, d, data);
+    if (!guild || !data) return;
+    client.emit(Events.AutoModerationActionExecution, new AutoModerationActionExecution(data, guild));
+  },
+
   GUILD_ROLE_CREATE(client, d) {
     const guild = guildOf(client, d);
     if (!guild || !d.guildRole?.role) return;
@@ -365,11 +514,15 @@ export const handlers: Record<string, DispatchHandler> = {
 
   GUILD_MEMBER_REMOVE(client, d) {
     const guild = guildOf(client, d);
-    const userId = d.guildMemberRemove?.userId ?? d.userId;
+    const data = d.guildMemberRemove;
+    const userId = data?.userId || data?.user?.id || d.userId;
     if (!guild || !userId) return;
+    // Who left comes with the event, so a member that was not cached still has its user.
+    const user = data?.user?.id ? normalizeUser(data.user) : undefined;
+    if (user) client.users._add(user);
     let member = guild.members.cache.get(userId);
     if (member) guild.members.cache.delete(userId);
-    else if (hasPartial(client, Partials.GuildMember)) member = new GuildMember(client, { userId }, guild);
+    else if (hasPartial(client, Partials.GuildMember)) member = new GuildMember(client, { userId, user }, guild);
     guild._countMember(-1);
     guild.presences.cache.delete(userId);
     guild.voiceStates.cache.delete(userId);
@@ -394,6 +547,19 @@ export const handlers: Record<string, DispatchHandler> = {
     client.emit(Events.GuildEmojiDelete, emoji);
   },
 
+  GUILD_EMOJI_UPDATE(client, d) {
+    const guild = guildOf(client, d);
+    if (!guild || !d.emoji?.id) return;
+    const raw = normalizeEmoji(d.emoji);
+    const existing = guild.emojis.cache.get(raw.id);
+    if (!existing) {
+      client.emit(Events.GuildEmojiCreate, guild.emojis._add(raw));
+      return;
+    }
+    const old = existing._update(raw);
+    client.emit(Events.GuildEmojiUpdate, old, existing);
+  },
+
   GUILD_STICKER_CREATE(client, d) {
     const guild = guildOf(client, d);
     if (!guild || !d.sticker) return;
@@ -409,6 +575,19 @@ export const handlers: Record<string, DispatchHandler> = {
     if (!sticker) return;
     guild.stickers.cache.delete(id);
     client.emit(Events.GuildStickerDelete, sticker);
+  },
+
+  GUILD_STICKER_UPDATE(client, d) {
+    const guild = guildOf(client, d);
+    if (!guild || !d.sticker?.id) return;
+    const raw = normalizeEmoji(d.sticker);
+    const existing = guild.stickers.cache.get(raw.id);
+    if (!existing) {
+      client.emit(Events.GuildStickerCreate, guild.stickers._add(raw));
+      return;
+    }
+    const old = existing._update(raw);
+    client.emit(Events.GuildStickerUpdate, old, existing);
   },
 
   VOICE_STATE_UPDATE(client, d) {
@@ -427,6 +606,44 @@ export const handlers: Record<string, DispatchHandler> = {
     const guildId = move?.guildId || d.guildId;
     if (!guildId || !move?.fromChannelId || !move.toChannelId) return;
     client.voice._onVoiceMove(guildId, move.fromChannelId, move.toChannelId);
+  },
+
+  GUILD_SOUND_CREATE(client, d) {
+    const guild = guildOf(client, d, d.sound);
+    if (!guild || !d.sound?.id) return;
+    const sound = guild.soundboardSounds._add(normalizeSound(d.sound));
+    client.emit(Events.GuildSoundboardSoundCreate, sound);
+  },
+
+  GUILD_SOUND_UPDATE(client, d) {
+    const guild = guildOf(client, d, d.sound);
+    if (!guild || !d.sound?.id) return;
+    const raw = normalizeSound(d.sound);
+    const existing = guild.soundboardSounds.cache.get(raw.id);
+    if (!existing) {
+      client.emit(Events.GuildSoundboardSoundUpdate, null, guild.soundboardSounds._add(raw));
+      return;
+    }
+    const old = existing._update(raw);
+    client.emit(Events.GuildSoundboardSoundUpdate, old, existing);
+  },
+
+  GUILD_SOUND_DELETE(client, d) {
+    const guild = guildOf(client, d);
+    const soundId = d.soundDelete?.soundId;
+    if (!guild || !soundId) return;
+    const sound = guild.soundboardSounds.cache.get(soundId) ?? { soundId, guildId: guild.id };
+    guild.soundboardSounds.cache.delete(soundId);
+    client.emit(Events.GuildSoundboardSoundDelete, sound);
+  },
+
+  SOUNDBOARD_PLAY(client, d) {
+    const data = d.soundboardPlay;
+    const guild = guildOf(client, d, data?.sound);
+    if (!guild || !data || !d.channelId) return;
+    // The sound rides along, so a bot that never fetched the server's sounds still knows it.
+    const sound = data.sound?.id ? guild.soundboardSounds._add(normalizeSound(data.sound)) : null;
+    client.emit(Events.VoiceChannelEffectSend, new VoiceChannelEffect(guild, { channelId: d.channelId, userId: data.userId ?? '', sound }));
   },
 
   USER_UPDATE(client, d) {

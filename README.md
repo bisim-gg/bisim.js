@@ -25,7 +25,9 @@ Node.js 18 or newer. ESM and CommonJS are both supported, and the types are incl
 ```js
 const { Client, Events, GatewayIntentBits, SlashCommandBuilder } = require('bisim.js');
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
+const client = new Client({
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
+});
 const ping = new SlashCommandBuilder().setName('ping').setDescription('Checks that the bot is awake');
 
 client.once(Events.ClientReady, async (readyClient) => {
@@ -45,8 +47,9 @@ client.on(Events.MessageCreate, async (message) => {
 client.login(process.env.BISIM_TOKEN);
 ```
 
-Create the bot in Bisim under Settings, Applications, add it to a server, and put its token in
-`BISIM_TOKEN`. More complete bots are in [`examples/`](./examples): a slash command bot laid out like the
+Create the bot in the Developer Portal ([bisim.gg/developers](https://bisim.gg/developers)), switch on its
+Message Content intent under Bot (the `!hello` command reads message text), add it to a server, and put its
+token in `BISIM_TOKEN`. More complete bots are in [`examples/`](./examples): a slash command bot laid out like the
 discord.js guide, a bot with buttons and a select menu, and a prefix command bot.
 
 ## Documentation
@@ -69,7 +72,8 @@ Most bots run unchanged. The short version:
 
 - **Names.** Only the word "Discord" changes: `DiscordAPIError` is `BisimAPIError`, `DiscordjsError` is
   `BisimjsError`, `discordSort` is `bisimSort`.
-- **Intents** are accepted and ignored. A bot receives what its permissions let it see.
+- **Intents** work as on Discord. The privileged ones (Server Members, Presence, Message Content) are switched
+  on in the Developer Portal, at [bisim.gg/developers](https://bisim.gg/developers).
 - **Voice** is the package [`@bisim/voice`](https://www.npmjs.com/package/@bisim/voice), in place of
   `@discordjs/voice`, with the same API: `adapterCreator: guild.voiceAdapterCreator` works as before.
 - **Not on Bisim:** threads, stage and forum channels, scheduled events,

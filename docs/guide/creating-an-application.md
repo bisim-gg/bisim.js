@@ -5,26 +5,31 @@ Commands, the token and the public key all belong to it.
 
 ## Create the application
 
-1. Open Bisim and go to **Settings**, then **Applications**.
-2. Choose a name for your bot and select **Create**.
-3. Bisim shows the **bot token** once. Copy it now and keep it somewhere safe: it is never shown again.
+1. Open the **Developer Portal**: in Bisim, go to **Settings**, then **Developer Portal**, or open
+   [bisim.gg/developers](https://bisim.gg/developers) directly.
+2. Select **New Application**, choose a name for your bot and select **Create**.
+3. On the application's **Bot** page, Bisim shows the **bot token** once, right after the application is
+   created. Copy it now and keep it somewhere safe: it is never shown again.
 
-The application page also shows:
+The application's other pages:
 
-- **Public key**: used to check requests if you choose an [Interactions URL](./interactions/interactions-url.md).
-- **Interactions URL**: leave it empty to receive interactions over the gateway, which is what most bots do.
-- **Servers** and **Commands**: where the bot is, and which commands it has registered.
+- **General Information**: the **Public Key**, used to check requests if you choose an
+  [Interactions URL](./interactions/interactions-url.md), and the **Interactions Endpoint URL**: leave it empty to
+  receive interactions over the gateway, which is what most bots do.
+- **Bot**: the bot's picture, banner and token, and its **Privileged Gateway Intents**.
+- **Installation**: the install link, and the servers the bot is in.
+- **Commands**: the commands it has registered.
 
 ::: warning Keep the token secret
-Anyone with the token controls your bot. If it leaks, select **Reset token** on the application page: the
-old token stops working at once, and you put the new one wherever your bot runs.
+Anyone with the token controls your bot. If it leaks, select **Reset Token** on the **Bot** page: the old
+token stops working at once, and you put the new one wherever your bot runs.
 :::
 
 ## Add the bot to a server
 
 There are two ways:
 
-- From the application page, under **Servers**, choose a server you manage and select **Add**.
+- On the **Installation** page, choose a server you manage and select **Add to Server**.
 - With an install link. Anyone who manages a server can open it (if the bot is public) and pick the
   permissions to grant. bisim.js makes the link for you:
 

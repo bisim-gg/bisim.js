@@ -1,6 +1,6 @@
 import { BisimjsRangeError, ErrorCodes } from '../errors/index.js';
 import type { RawComponentData } from '../types/raw.js';
-import { ButtonStyle, ChannelType, ComponentType, TextInputStyle } from '../util/Enums.js';
+import { ButtonStyle, ChannelType, ComponentType, SelectMenuDefaultValueType, TextInputStyle } from '../util/Enums.js';
 import { channelTypeToBisim, toBisimComponent, toBisimComponentEmoji } from '../util/Transformers.js';
 import { notSupported } from '../util/Util.js';
 
@@ -288,10 +288,42 @@ export class StringSelectMenuBuilder extends BaseSelectMenuBuilder {
   }
 }
 
+/**
+ * A value a user, role, mentionable or channel select shows as picked when it is drawn.
+ */
+export interface SelectMenuDefaultValue {
+  /** The user's, role's or channel's id. */
+  id: string;
+  /** What the id is. */
+  type: SelectMenuDefaultValueType | `${SelectMenuDefaultValueType}`;
+}
+
+/** A user, role or channel to preselect: its id, or anything with an `id`. */
+export type SelectMenuDefaultValueResolvable = string | { id: string };
+
+const defaultIds = (values: readonly (SelectMenuDefaultValueResolvable | readonly SelectMenuDefaultValueResolvable[])[]): string[] =>
+  (values.flat() as SelectMenuDefaultValueResolvable[]).map((value) => (typeof value === 'string' ? value : value.id));
+
 abstract class AutoSelectMenuBuilder extends BaseSelectMenuBuilder {
-  /** Not on Bisim yet: preselected values. */
-  public setDefaultValues(..._values: unknown[]): this {
-    return notSupported('Default values in select menus');
+  /** The default values the builder holds now. */
+  protected get defaults(): SelectMenuDefaultValue[] {
+    return ((this.data as { defaultValues?: SelectMenuDefaultValue[] }).defaultValues ??= []);
+  }
+
+  /** Adds default values of one kind (at most 25 in all). */
+  protected addDefaults(type: SelectMenuDefaultValueType, ids: readonly string[]): this {
+    const values = [...this.defaults, ...ids.map((id) => ({ id, type }))];
+    if (values.length > 25) throw new RangeError('A select menu has at most 25 default values.');
+    (this.data as { defaultValues?: SelectMenuDefaultValue[] }).defaultValues = values;
+    return this;
+  }
+
+  /** Replaces the default values (the menu's count must lie between its min and max values). */
+  public setDefaultValues(...values: (SelectMenuDefaultValue | readonly SelectMenuDefaultValue[])[]): this {
+    const flat = (values.flat() as SelectMenuDefaultValue[]).map((value) => ({ id: value.id, type: value.type }));
+    if (flat.length > 25) throw new RangeError('A select menu has at most 25 default values.');
+    (this.data as { defaultValues?: SelectMenuDefaultValue[] }).defaultValues = flat;
+    return this;
   }
 }
 
@@ -312,14 +344,15 @@ export class UserSelectMenuBuilder extends AutoSelectMenuBuilder {
     super({ ...fromInput(data), type: ComponentType.UserSelect });
   }
 
-  /** Not on Bisim yet. */
-  public addDefaultUsers(..._users: unknown[]): this {
-    return notSupported('Default values in select menus');
+  /** Adds members the menu shows as picked. */
+  public addDefaultUsers(...users: (SelectMenuDefaultValueResolvable | readonly SelectMenuDefaultValueResolvable[])[]): this {
+    return this.addDefaults(SelectMenuDefaultValueType.User, defaultIds(users));
   }
 
-  /** Not on Bisim yet. */
-  public setDefaultUsers(..._users: unknown[]): this {
-    return notSupported('Default values in select menus');
+  /** Replaces the members the menu shows as picked. */
+  public setDefaultUsers(...users: (SelectMenuDefaultValueResolvable | readonly SelectMenuDefaultValueResolvable[])[]): this {
+    (this.data as { defaultValues?: unknown[] }).defaultValues = [];
+    return this.addDefaultUsers(...users);
   }
 }
 
@@ -340,14 +373,15 @@ export class RoleSelectMenuBuilder extends AutoSelectMenuBuilder {
     super({ ...fromInput(data), type: ComponentType.RoleSelect });
   }
 
-  /** Not on Bisim yet. */
-  public addDefaultRoles(..._roles: unknown[]): this {
-    return notSupported('Default values in select menus');
+  /** Adds roles the menu shows as picked. */
+  public addDefaultRoles(...roles: (SelectMenuDefaultValueResolvable | readonly SelectMenuDefaultValueResolvable[])[]): this {
+    return this.addDefaults(SelectMenuDefaultValueType.Role, defaultIds(roles));
   }
 
-  /** Not on Bisim yet. */
-  public setDefaultRoles(..._roles: unknown[]): this {
-    return notSupported('Default values in select menus');
+  /** Replaces the roles the menu shows as picked. */
+  public setDefaultRoles(...roles: (SelectMenuDefaultValueResolvable | readonly SelectMenuDefaultValueResolvable[])[]): this {
+    (this.data as { defaultValues?: unknown[] }).defaultValues = [];
+    return this.addDefaultRoles(...roles);
   }
 }
 
@@ -366,6 +400,23 @@ export class MentionableSelectMenuBuilder extends AutoSelectMenuBuilder {
 
   public constructor(data?: Record<string, unknown>) {
     super({ ...fromInput(data), type: ComponentType.MentionableSelect });
+  }
+
+  /** Adds members the menu shows as picked. */
+  public addDefaultUsers(...users: (SelectMenuDefaultValueResolvable | readonly SelectMenuDefaultValueResolvable[])[]): this {
+    return this.addDefaults(SelectMenuDefaultValueType.User, defaultIds(users));
+  }
+
+  /** Adds roles the menu shows as picked. */
+  public addDefaultRoles(...roles: (SelectMenuDefaultValueResolvable | readonly SelectMenuDefaultValueResolvable[])[]): this {
+    return this.addDefaults(SelectMenuDefaultValueType.Role, defaultIds(roles));
+  }
+
+  /** Adds users and roles the menu shows as picked, each with its type. */
+  public addDefaultValues(...values: (SelectMenuDefaultValue | readonly SelectMenuDefaultValue[])[]): this {
+    const flat = values.flat() as SelectMenuDefaultValue[];
+    const merged = [...this.defaults, ...flat.map((value) => ({ id: value.id, type: value.type }))];
+    return this.setDefaultValues(merged);
   }
 }
 
@@ -398,14 +449,15 @@ export class ChannelSelectMenuBuilder extends AutoSelectMenuBuilder {
     return this.addChannelTypes(...types);
   }
 
-  /** Not on Bisim yet. */
-  public addDefaultChannels(..._channels: unknown[]): this {
-    return notSupported('Default values in select menus');
+  /** Adds channels the menu shows as picked. */
+  public addDefaultChannels(...channels: (SelectMenuDefaultValueResolvable | readonly SelectMenuDefaultValueResolvable[])[]): this {
+    return this.addDefaults(SelectMenuDefaultValueType.Channel, defaultIds(channels));
   }
 
-  /** Not on Bisim yet. */
-  public setDefaultChannels(..._channels: unknown[]): this {
-    return notSupported('Default values in select menus');
+  /** Replaces the channels the menu shows as picked. */
+  public setDefaultChannels(...channels: (SelectMenuDefaultValueResolvable | readonly SelectMenuDefaultValueResolvable[])[]): this {
+    (this.data as { defaultValues?: unknown[] }).defaultValues = [];
+    return this.addDefaultChannels(...channels);
   }
 }
 

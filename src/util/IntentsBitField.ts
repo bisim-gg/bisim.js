@@ -7,8 +7,8 @@ import { GatewayIntentBits, MessageFlags } from './Enums.js';
 export type GatewayIntentsString = keyof typeof GatewayIntentBits;
 
 /**
- * A set of gateway intents, as passed to `new Client({ intents })`. Bisim takes intents so discord.js code
- * runs unchanged, but does not filter by them: a bot gets every event its permissions allow.
+ * A set of gateway intents, as passed to `new Client({ intents })`. They are sent when the client connects,
+ * and the gateway delivers only the events they cover (among those the bot's permissions allow).
  */
 export class IntentsBitField extends BitField<GatewayIntentsString> {
   /**

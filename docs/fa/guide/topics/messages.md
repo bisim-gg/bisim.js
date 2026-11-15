@@ -23,6 +23,8 @@ client.on(Events.MessageCreate, async (message) => {
 ```
 
 ربات فقط پیام‌های خودش را می‌تواند ویرایش کند. حذف پیام دیگران دسترسی مدیریت پیام‌ها (Manage Messages) می‌خواهد.
+خواندن `message.content` به اینتنت Message Content نیاز دارد (صفحهٔ [گیت‌وی و اینتنت‌ها](./gateway.md) را
+ببینید)؛ بدون آن متن خالی است، مگر در پیام‌های خصوصی، پیام‌های خود ربات و پیام‌هایی که به آن اشاره می‌کنند.
 
 ## فایل‌ها
 
@@ -45,8 +47,48 @@ await channel.send({
 فایل می‌تواند یک مسیر، یک نشانی، یک Buffer یا یک stream باشد. بی‌سیم در هر پیام حداکثر ۱۰ فایل و هر کدام به‌طور
 پیش‌فرض تا ۱۰ مگابایت می‌پذیرد. `setSpoiler(true)` فایل را تا زمان کلیک تار نشان می‌دهد.
 
-فایل را با `channel.send()` و `message.reply()` می‌توان فرستاد. پاسخ تعامل‌ها و وب‌هوک‌ها هنوز فایل نمی‌پذیرند و
-فرستادن فایل در آن‌ها یک `BisimjsError` می‌دهد.
+همهٔ راه‌های فرستادن `files` می‌پذیرند: `channel.send()`، `message.reply()`، و در تعامل‌ها `reply()`،
+`followUp()`، `editReply()` و `update()`، و در وب‌هوک‌ها `send()` و `editMessage()`. امبد با `attachment://name`
+فایلی از همان پیام را نشان می‌دهد ([امبدها](./embeds.md) را ببینید).
+
+در ویرایش پیام، مثل دیسکورد، `attachments` فهرست فایل‌هایی است که پیام نگه می‌دارد و `files` فایل تازه اضافه
+می‌کند. اگر هیچ‌کدام را ندهید همهٔ فایل‌ها می‌مانند؛ اگر فقط `files` را بدهید، فایل‌های تازه جای فایل‌های قبلی را
+می‌گیرند:
+
+```js
+await message.edit({ content: 'Updated report', files: ['./report-v2.pdf'] }); // replaces the files
+await message.edit({ files: ['./extra.png'], attachments: [...message.attachments.values()] }); // adds one
+await message.removeAttachments(); // keeps the text, drops every file
+```
+
+## چه کسی صدا زده می‌شود
+
+`allowedMentions`، مثل دیسکورد، تعیین می‌کند کدام اشاره‌های متن کسی را صدا بزنند. اگر آن را ندهید، همهٔ اشاره‌ها
+صدا می‌زنند؛ اگر بدهید، فقط آنچه نام برده صدا می‌زند و اشاره‌ای که اجازه ندارد به شکل متن ساده در پیام می‌ماند:
+
+```js
+await channel.send({ content: `${user} wins! @everyone`, allowedMentions: { users: [user.id] } });
+await channel.send({ content: 'No pings at all, @everyone', allowedMentions: { parse: [] } });
+
+// A default for every message the bot sends:
+const client = new Client({ intents, allowedMentions: { parse: ['users'] } });
+```
+
+`parse` مقدارهای `users`، `roles` و `everyone` (که `@here` را هم در بر می‌گیرد) را می‌پذیرد. در بی‌سیم پاسخ
+دادن به پیام کسی را صدا نمی‌زند، پس `repliedUser` اثری ندارد.
+
+## پیام بی‌صدا و پنهان کردن امبدها
+
+```js
+const { MessageFlags } = require('bisim.js');
+
+await channel.send({ content: 'Nightly backup done', flags: MessageFlags.SuppressNotifications }); // no notification
+await channel.send({ content: 'https://example.com', flags: MessageFlags.SuppressEmbeds }); // no link preview
+await message.suppressEmbeds(true); // hide a message's embeds later (only the bot's own messages)
+```
+
+پاسخ تعامل‌ها و وب‌هوک‌ها هم همین پرچم‌ها را می‌پذیرند. `message.flags` آن‌ها را برمی‌گرداند، و پیامی که
+`SuppressEmbeds` دارد `embeds` ندارد.
 
 ## گرفتن پیام‌ها
 
@@ -65,8 +107,9 @@ const deleted = await channel.bulkDelete(20, true); // the last 20, skipping one
 
 ## اشاره‌ها (منشن)
 
-اشاره‌ها نشانه‌هایی داخل متن‌اند؛ مثل `<@id>` برای کاربر، `<@&id>` برای نقش و `<#id>` برای کانال. bisim.js
-آن‌ها را در `message.mentions` می‌خواند:
+اشاره‌ها نشانه‌هایی داخل متن‌اند؛ مثل `<@id>` برای کاربر، `<@&id>` برای نقش و `<#id>` برای کانال. بی‌سیم
+اینکه پیام به چه کسانی و چه نقش‌هایی اشاره می‌کند را همراه آن می‌فرستد، پس `message.mentions` حتی وقتی ربات
+نمی‌تواند متن را بخواند (اینتنت Message Content ندارد) درست است؛ کانال‌ها از متن خوانده می‌شوند:
 
 ```js
 const user = message.mentions.users.first();
@@ -84,10 +127,12 @@ await message.react('<:wave:123456789012345678>'); // a server's custom emoji
 
 const users = await reaction.users.fetch();
 await reaction.users.remove(someUserId); // someone else's needs Manage Messages
+await reaction.remove(); // every reaction of this emoji, needs Manage Messages
 await message.reactions.removeAll();
 ```
 
-برای شنیدن واکنش‌ها از `MessageReactionAdd` و `MessageReactionRemove` استفاده کنید:
+برای شنیدن واکنش‌ها از `MessageReactionAdd` و `MessageReactionRemove` استفاده کنید، و برای پاک شدن همهٔ
+واکنش‌های یک ایموجی از `MessageReactionRemoveEmoji`:
 
 ```js
 client.on(Events.MessageReactionAdd, async (reaction, user) => {
@@ -98,6 +143,26 @@ client.on(Events.MessageReactionAdd, async (reaction, user) => {
 
 برای دریافت واکنش روی پیام‌هایی که پیش از روشن شدن ربات فرستاده شده‌اند، `Partials.Message` و
 `Partials.Reaction` را فعال کنید.
+
+## وب‌هوک‌ها
+
+وب‌هوک با نام و تصویر خودش پیام می‌فرستد. متن، امبد و فایل می‌پذیرد و می‌تواند پیام‌هایی را که فرستاده، فقط با
+شناسه و توکن خودش، بگیرد، ویرایش کند و حذف کند:
+
+```js
+const webhook = await channel.createWebhook({ name: 'Reports', avatar: './reports.png' });
+const sent = await webhook.send({ content: 'Daily report', files: ['./report.pdf'] });
+await webhook.editMessage(sent, { content: 'Daily report (corrected)' });
+await webhook.deleteMessage(sent);
+await webhook.edit({ avatar: null }); // removes the picture
+
+const { WebhookClient } = require('bisim.js');
+const hook = new WebhookClient({ url: process.env.WEBHOOK_URL });
+const message = await hook.fetchMessage('123456789012345678');
+```
+
+تصویر مال خود وب‌هوک است: `avatarURL` روی یک پیام پشتیبانی نمی‌شود و با یک هشدار نادیده گرفته می‌شود. پیام
+وب‌هوک کامپوننت نمی‌پذیرد.
 
 ## سنجاق و نظرسنجی
 

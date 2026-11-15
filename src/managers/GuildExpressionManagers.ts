@@ -28,6 +28,32 @@ export interface GuildEmojiCreateOptions {
 }
 
 /**
+ * Options for editing an emoji.
+ */
+export interface GuildEmojiEditOptions {
+  /** The new name (2 to 32 letters, digits or `_`). */
+  name?: string;
+  /** Not on Bisim: emoji limited to roles. */
+  roles?: unknown;
+  /** Why (for the audit log). */
+  reason?: string;
+}
+
+/**
+ * Options for editing a sticker.
+ */
+export interface GuildStickerEditOptions {
+  /** The new name (2 to 30 characters). */
+  name?: string;
+  /** Not on Bisim: sticker descriptions. */
+  description?: string | null;
+  /** Not on Bisim: sticker tags. */
+  tags?: string;
+  /** Why (for the audit log). */
+  reason?: string;
+}
+
+/**
  * Options for creating a sticker.
  */
 export interface GuildStickerCreateOptions {
@@ -137,9 +163,24 @@ export class GuildEmojiManager extends CachedManager<string, GuildEmoji, GuildEm
     this.cache.delete(id);
   }
 
-  /** Not on Bisim: emoji cannot be renamed. */
-  public edit(_emoji: unknown, _options: unknown): Promise<never> {
-    return notSupported('Editing an emoji');
+  /**
+   * Renames an emoji (needs Manage Expressions, or Create Expressions for one the bot added).
+   *
+   * @param emoji - The emoji
+   * @param options - The new name
+   */
+  public async edit(emoji: GuildEmoji | string, options: GuildEmojiEditOptions): Promise<GuildEmoji> {
+    if (options.roles !== undefined) notSupported('Emoji limited to roles');
+    const id = typeof emoji === 'string' ? emoji : emoji.id!;
+    const body: Record<string, unknown> = {};
+    if (options.name !== undefined) body.name = options.name;
+    const data = (await this.client.rest.patch(Routes.guildEmoji(this.guild.id, id), { body, reason: options.reason })) as RawEmojiData;
+    const cached = this.cache.get(id);
+    if (cached) {
+      cached._patch(data);
+      return cached;
+    }
+    return typeof emoji === 'string' ? this._add(data) : (emoji._patch(data), emoji);
   }
 
   /**
@@ -235,8 +276,24 @@ export class GuildStickerManager extends CachedManager<string, Sticker, Sticker 
     this.cache.delete(id);
   }
 
-  /** Not on Bisim: stickers cannot be renamed. */
-  public edit(_sticker: unknown, _options: unknown): Promise<never> {
-    return notSupported('Editing a sticker');
+  /**
+   * Renames a sticker (needs Manage Expressions, or Create Expressions for one the bot added).
+   *
+   * @param sticker - The sticker
+   * @param options - The new name
+   */
+  public async edit(sticker: Sticker | string, options: GuildStickerEditOptions): Promise<Sticker> {
+    if (options.description !== undefined) notSupported('Sticker descriptions');
+    if (options.tags !== undefined) notSupported('Sticker tags');
+    const id = typeof sticker === 'string' ? sticker : sticker.id;
+    const body: Record<string, unknown> = {};
+    if (options.name !== undefined) body.name = options.name;
+    const data = (await this.client.rest.patch(Routes.guildSticker(this.guild.id, id), { body, reason: options.reason })) as RawStickerData;
+    const cached = this.cache.get(id);
+    if (cached) {
+      cached._patch(data);
+      return cached;
+    }
+    return typeof sticker === 'string' ? this._add(data) : (sticker._patch(data), sticker);
   }
 }

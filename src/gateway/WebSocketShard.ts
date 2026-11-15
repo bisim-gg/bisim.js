@@ -45,11 +45,14 @@ export class GatewayConnectError extends Error {
    * @param message - What happened
    * @param httpStatus - The HTTP status of a refused upgrade
    * @param retryAfter - How long the gateway asked to wait, in seconds
+   * @param closeCode - The close code, when the gateway accepted the socket and then closed it before hello
+   * (4013 and 4014 judge the intents)
    */
   public constructor(
     message: string,
     public readonly httpStatus: number | null = null,
     public readonly retryAfter: number | null = null,
+    public readonly closeCode: number | null = null,
   ) {
     super(message);
     this.name = 'GatewayConnectError';
@@ -138,7 +141,8 @@ export class WebSocketShard extends EventEmitter {
       });
       ws.on('close', (code, reason) => {
         if (!settled) {
-          fail(new GatewayConnectError(`The gateway closed the connection before hello (${code})`));
+          const why = reason.toString();
+          fail(new GatewayConnectError(`The gateway closed the connection before hello (${code}${why ? `: ${why}` : ''})`, null, null, code));
           return;
         }
         if (this.ws !== ws) return;

@@ -336,6 +336,7 @@ export function toBisimComponent(input: unknown): RawComponentData {
   const nested = pick<unknown[]>(data, 'components');
   const options = pick<Record<string, unknown>[]>(data, 'options');
   const channelTypes = pick<(number | string)[]>(data, 'channelTypes');
+  const defaultValues = pick<{ id: string | number; type: string }[]>(data, 'defaultValues');
   return cleanObject({
     type: data.type as number,
     style: data.style as number | undefined,
@@ -363,6 +364,7 @@ export function toBisimComponent(input: unknown): RawComponentData {
     channelTypes: channelTypes
       ?.map((channelType) => channelTypeToBisim(channelType))
       .filter((name): name is RawChannelType => name !== null),
+    defaultValues: defaultValues?.map((value) => ({ id: String(value.id), type: value.type })),
     components: nested?.map((component) => toBisimComponent(component)),
   }) as RawComponentData;
 }

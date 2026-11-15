@@ -42,8 +42,9 @@ export type If<Ready extends boolean, Value, Fallback = null> = Ready extends tr
  */
 export interface BootstrapOptions {
   /**
-   * Load the member list, which fills `guild.members.cache` (so `message.member`, mentions and
-   * `member.permissions` work for everyone). Default `true`.
+   * Load the member list, which fills `guild.members.cache` (so `member.permissions` and `channel.members`
+   * work for everyone). Default `true`. The list is loaded only when the client's intents include
+   * `GuildMembers`; without it only the bot's own member is loaded, as on Discord.
    */
   members?: boolean;
   /** Load the custom emoji. Default `true`. */
@@ -80,7 +81,11 @@ export type CacheFactory = ((...args: unknown[]) => unknown) & { messages?: numb
  * The options of a {@link Client}, with discord.js's names.
  */
 export interface ClientOptions {
-  /** Accepted for compatibility; Bisim ignores intents. */
+  /**
+   * The gateway intents: which events the bot receives. They are sent when the client connects. A
+   * privileged one (`GuildMembers`, `GuildPresences`, `MessageContent`) that is not switched on for the app
+   * in the Developer Portal makes `login()` reject with `DisallowedIntents`.
+   */
   intents: BitFieldResolvable<GatewayIntentsString, number>;
   /** Which partial structures to make for uncached data (as discord.js does). */
   partials?: readonly Partials[];
@@ -90,7 +95,7 @@ export interface ClientOptions {
   rest?: Partial<RESTOptions>;
   /** Gateway options: `gateway` changes the WebSocket address. */
   ws?: WebSocketOptions;
-  /** Accepted for compatibility: Bisim does not filter mentions yet. */
+  /** Which mentions ping, for every message the bot sends that does not say otherwise. */
   allowedMentions?: MessageMentionOptions;
   /** How many messages each channel keeps (`Options.cacheWithLimits({ MessageManager: 200 })`). */
   makeCache?: CacheFactory | { messages?: number };

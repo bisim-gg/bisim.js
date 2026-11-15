@@ -26,6 +26,10 @@ export const Routes = {
   // Users
   /** `GET /users/:id`; `Routes.user()` or `Routes.user('@me')` is the bot itself, `GET /auth/me`. */
   user: (userId: Id | '@me' = '@me'): RouteLike => (userId === '@me' ? '/auth/me' : `/users/${userId}`),
+  /** Bisim: `POST` (multipart `file`) / `DELETE /users/@me/avatar`, the bot's own picture. */
+  currentUserAvatar: (): RouteLike => '/users/@me/avatar',
+  /** Bisim: `POST` (multipart `file`) / `DELETE /users/@me/banner`, the bot's own banner. */
+  currentUserBanner: (): RouteLike => '/users/@me/banner',
   /** `GET /dms`, `POST /dms` (open a DM with `{ userId }`). */
   userChannels: (): RouteLike => '/dms',
   /** `GET /guilds`: the servers the bot is in. */
@@ -71,17 +75,19 @@ export const Routes = {
   guildBans: (guildId: Id): RouteLike => `/guilds/${guildId}/bans`,
   /** `GET` / `PUT` / `DELETE /guilds/:id/bans/:userId`. */
   guildBan: (guildId: Id, userId: Id): RouteLike => `/guilds/${guildId}/bans/${userId}`,
+  /** `POST /guilds/:id/bulk-ban` with `{ userIds, deleteMessageSeconds, reason }`. */
+  guildBulkBan: (guildId: Id): RouteLike => `/guilds/${guildId}/bulk-ban`,
   /** `GET` / `POST /guilds/:id/invites`. */
   guildInvites: (guildId: Id): RouteLike => `/guilds/${guildId}/invites`,
   /** Bisim: `DELETE /guilds/:id/invites/:code`. */
   guildInvite: (guildId: Id, code: string): RouteLike => `/guilds/${guildId}/invites/${encodeURIComponent(code)}`,
   /** `GET` / `POST /guilds/:id/emojis` (creating one is a multipart upload). */
   guildEmojis: (guildId: Id): RouteLike => `/guilds/${guildId}/emojis`,
-  /** `DELETE /guilds/:id/emojis/:emojiId`. */
+  /** `PATCH` (`{ name }`) / `DELETE /guilds/:id/emojis/:emojiId`. */
   guildEmoji: (guildId: Id, emojiId: Id): RouteLike => `/guilds/${guildId}/emojis/${emojiId}`,
   /** `GET` / `POST /guilds/:id/stickers`. */
   guildStickers: (guildId: Id): RouteLike => `/guilds/${guildId}/stickers`,
-  /** `DELETE /guilds/:id/stickers/:stickerId`. */
+  /** `PATCH` (`{ name }`) / `DELETE /guilds/:id/stickers/:stickerId`. */
   guildSticker: (guildId: Id, stickerId: Id): RouteLike => `/guilds/${guildId}/stickers/${stickerId}`,
   /** `GET` / `POST /guilds/:id/sounds`. */
   guildSoundboardSounds: (guildId: Id): RouteLike => `/guilds/${guildId}/sounds`,
@@ -89,6 +95,10 @@ export const Routes = {
   guildSoundboardSound: (guildId: Id, soundId: Id): RouteLike => `/guilds/${guildId}/sounds/${soundId}`,
   /** `GET /guilds/:id/webhooks`. */
   guildWebhooks: (guildId: Id): RouteLike => `/guilds/${guildId}/webhooks`,
+  /** `GET` / `POST /guilds/:id/automod/rules`. */
+  guildAutoModerationRules: (guildId: Id): RouteLike => `/guilds/${guildId}/automod/rules`,
+  /** `GET` / `PATCH` / `DELETE /guilds/:id/automod/rules/:ruleId`. */
+  guildAutoModerationRule: (guildId: Id, ruleId: Id): RouteLike => `/guilds/${guildId}/automod/rules/${ruleId}`,
   /** `GET /guilds/:id/audit-log?before=`. */
   guildAuditLog: (guildId: Id): RouteLike => `/guilds/${guildId}/audit-log`,
   /** Bisim: `GET /guilds/:id/voice-states`. */
@@ -113,9 +123,15 @@ export const Routes = {
   /** `DELETE` someone's reaction: `/channels/:id/messages/:messageId/reactions/:emoji/:userId`. */
   channelMessageUserReaction: (channelId: Id, messageId: Id, emoji: string, userId: Id): RouteLike =>
     `/channels/${channelId}/messages/${messageId}/reactions/${emoji}/${userId}`,
-  /** `GET` who reacted with an emoji: `/channels/:id/messages/:messageId/reactions/:emoji`. */
+  /**
+   * `GET` who reacted with an emoji: `/channels/:id/messages/:messageId/reactions/:emoji`. On Bisim a `DELETE` of
+   * this path removes the bot's own reaction; every reaction of one emoji is {@link Routes.channelMessageReactionAll}.
+   */
   channelMessageReaction: (channelId: Id, messageId: Id, emoji: string): RouteLike =>
     `/channels/${channelId}/messages/${messageId}/reactions/${emoji}`,
+  /** Bisim: `DELETE` every reaction of one emoji, `/channels/:id/messages/:messageId/reactions/:emoji/all`. */
+  channelMessageReactionAll: (channelId: Id, messageId: Id, emoji: string): RouteLike =>
+    `/channels/${channelId}/messages/${messageId}/reactions/${emoji}/all`,
   /** `DELETE` every reaction: `/channels/:id/messages/:messageId/reactions`. */
   channelMessageAllReactions: (channelId: Id, messageId: Id): RouteLike => `/channels/${channelId}/messages/${messageId}/reactions`,
   /** `GET /channels/:id/pins`. */
@@ -144,6 +160,8 @@ export const Routes = {
   channelVoiceLeave: (channelId: Id): RouteLike => `/channels/${channelId}/voice/leave`,
   /** Bisim: `PATCH /channels/:id/voice/state` with `{ selfMuted, selfDeafened }`, while in that channel. */
   channelVoiceSelfState: (channelId: Id): RouteLike => `/channels/${channelId}/voice/state`,
+  /** `PUT /channels/:id/voice-status` with `{ status }`: a voice channel's status line, while in that channel. */
+  channelVoiceStatus: (channelId: Id): RouteLike => `/channels/${channelId}/voice-status`,
   /** `POST`: plays a soundboard sound in the voice channel the bot is in (Bisim: `/channels/:id/soundboard/play`). */
   sendSoundboardSound: (channelId: Id): RouteLike => `/channels/${channelId}/soundboard/play`,
   /** Bisim: `PUT /channels/:id/messages/:messageId/poll/votes` with `{ answerIds }`. */
@@ -162,11 +180,15 @@ export const Routes = {
   /** `GET` / `PATCH` / `DELETE /webhooks/:id`, or with a token `POST /webhooks/:id/:token` to send. */
   webhook: (webhookId: Id, webhookToken?: string): RouteLike =>
     webhookToken ? `/webhooks/${webhookId}/${webhookToken}` : `/webhooks/${webhookId}`,
-  /** `/webhooks/:id/:token/messages/:messageId` (not on Bisim yet: editing past webhook messages). */
+  /** `GET` / `PATCH` / `DELETE /webhooks/:id/:token/messages/:messageId`: a message the webhook posted. */
   webhookMessage: (webhookId: Id, webhookToken: string, messageId: Id | '@original' = '@original'): RouteLike =>
     `/webhooks/${webhookId}/${webhookToken}/messages/${messageId}`,
   /** Bisim: `POST /webhooks/:id/token`, a new token. */
   webhookToken: (webhookId: Id): RouteLike => `/webhooks/${webhookId}/token`,
+  /** Bisim: `POST` (multipart `file`) / `DELETE /webhooks/:id/avatar`, the webhook's picture. */
+  webhookAvatar: (webhookId: Id): RouteLike => `/webhooks/${webhookId}/avatar`,
+  /** Bisim: `POST /webhooks/:id/:token/attachments`, upload addresses for the webhook's messages. */
+  webhookAttachments: (webhookId: Id, webhookToken: string): RouteLike => `/webhooks/${webhookId}/${webhookToken}/attachments`,
 
   // Applications and commands
   /** `GET /applications/@me`. */
@@ -196,6 +218,9 @@ export const Routes = {
   /** Bisim: `GET` / `PATCH` / `DELETE /interactions/:id/:token/messages/:messageId` (`@original` for the reply). */
   interactionMessage: (interactionId: Id, interactionToken: string, messageId: Id | '@original' = '@original'): RouteLike =>
     `/interactions/${interactionId}/${interactionToken}/messages/${messageId}`,
+  /** Bisim: `POST /interactions/:id/:token/attachments`, upload addresses for the interaction's answers. */
+  interactionAttachments: (interactionId: Id, interactionToken: string): RouteLike =>
+    `/interactions/${interactionId}/${interactionToken}/attachments`,
 
   // Misc
   /** Bisim: `GET /client-config` (upload limits and switches). */
@@ -248,8 +273,6 @@ export const Routes = {
   guildPreview: notOnBisim('guildPreview'),
   /** Not on Bisim. */
   guildTemplates: notOnBisim('guildTemplates'),
-  /** Not on Bisim. */
-  guildBulkBan: notOnBisim('guildBulkBan'),
   /** Not on Bisim. */
   guildApplicationCommandsPermissions: notOnBisim('guildApplicationCommandsPermissions'),
   /** Not on Bisim. */

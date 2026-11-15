@@ -110,6 +110,22 @@ export class VoiceChannel extends GuildChannel {
   }
 
   /**
+   * Sets the channel's status line ("Now playing ..."), or clears it with an empty string. The bot must be in the
+   * call, with Set Voice Channel Status.
+   *
+   * @param status - One line, up to 500 characters
+   * @param reason - Why (for the audit log)
+   * @example
+   * ```js
+   * await voiceChannel.setStatus('Now playing: lo-fi beats');
+   * ```
+   */
+  public async setStatus(status: string, reason?: string): Promise<this> {
+    await this.client.rest.put(Routes.channelVoiceStatus(this.id), { body: { status }, reason });
+    return this;
+  }
+
+  /**
    * Always `false` (no user limits on Bisim).
    */
   public get full(): boolean {

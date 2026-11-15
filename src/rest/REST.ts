@@ -125,6 +125,19 @@ class SequentialHandler {
         await sleep(bucketWait);
         continue;
       }
+      // The bucket Bisim named for this route (X-RateLimit-Bucket), shared with every route in it: with nothing
+      // left before its reset, the request waits for the reset.
+      const bucket = this.manager._bucketOf(this.hash);
+      if (bucket && bucket.resetAt <= now) bucket.remaining = bucket.limit;
+      if (bucket && bucket.remaining <= 0) {
+        const wait = bucket.resetAt - now;
+        const data = this.rateLimitData(request, wait, false);
+        this.manager.emit('rateLimited', data);
+        this.manager.debug(`Bucket ${data.hash} has nothing left: waiting ${wait}ms (${request.route})`);
+        await this.maybeReject(data);
+        await sleep(wait);
+        continue;
+      }
       const { manager } = this;
       if (manager.globalWindowReset <= now) {
         // A new one second window: the global allowance starts over.
@@ -133,17 +146,33 @@ class SequentialHandler {
       }
       if (manager.globalRemaining > 0) {
         manager.globalRemaining -= 1;
+        if (bucket) bucket.remaining -= 1;
         return;
       }
       await sleep(Math.max(0, manager.globalWindowReset - now));
     }
   }
 
-  private rateLimitData(request: PreparedRequest, wait: number, global: boolean): RateLimitData {
+  private rateLimitData(request: PreparedRequest, wait: number, global: boolean, scope?: RateLimitData['scope']): RateLimitData {
     const { method, url, route } = request;
-    const { hash, majorParameter } = this;
-    const limit = global ? this.manager.globalLimit : this.limit;
-    return { timeToReset: wait, retryAfter: wait, sublimitTimeout: 0, limit, method, hash, url, route, majorParameter, global, scope: global ? 'global' : 'user' };
+    const { majorParameter } = this;
+    const bucketHash = this.manager.hashes.get(this.hash)?.value;
+    const bucket = bucketHash ? this.manager.buckets.get(bucketHash) : undefined;
+    const hash = bucketHash ?? this.hash;
+    const limit = global ? this.manager.globalLimit : (bucket?.limit ?? this.limit);
+    return {
+      timeToReset: wait,
+      retryAfter: wait,
+      sublimitTimeout: 0,
+      limit,
+      method,
+      hash,
+      url,
+      route,
+      majorParameter,
+      global,
+      scope: scope ?? (global ? 'global' : 'user'),
+    };
   }
 
   private async maybeReject(data: RateLimitData): Promise<void> {
@@ -200,6 +229,7 @@ class SequentialHandler {
     const limit = Number(res.headers.get('x-ratelimit-limit'));
     const remaining = res.headers.get('x-ratelimit-remaining');
     if (Number.isFinite(limit) && limit > 0) this.manager.globalLimit = limit;
+    const bucket = this.manager._learnBucket(this.hash, res.headers);
 
     if (res.status === 429) {
       const raw = (await readBody(res)) as BisimErrorData | undefined;
@@ -210,12 +240,18 @@ class SequentialHandler {
       // Bisim marks the bot's global limit with `global: true`; an exhausted global counter is the fallback.
       const global =
         raw?.global === true || res.headers.get('x-ratelimit-global') === 'true' || remaining === '0';
-      const data = this.rateLimitData(request, wait, global);
+      const scopeHeader = res.headers.get('x-ratelimit-scope');
+      const scope = scopeHeader === 'shared' || scopeHeader === 'global' || scopeHeader === 'user' ? scopeHeader : undefined;
+      const data = this.rateLimitData(request, wait, global, scope);
       this.manager.emit('rateLimited', data);
       this.manager.debug(`429 on ${request.route}: waiting ${wait}ms (${global ? 'global' : 'route'})`);
       await this.maybeReject(data);
       if (global) this.manager.globalReset = Date.now() + wait;
       else this.resetAt = Date.now() + wait;
+      if (bucket && !global) {
+        bucket.remaining = 0;
+        bucket.resetAt = Math.max(bucket.resetAt, Date.now() + wait);
+      }
       return this.runRequest(request, retries);
     }
 
@@ -324,7 +360,73 @@ export async function toBuffer(data: RawFile['data']): Promise<Buffer> {
 
 const BULK_COMMANDS_ROUTE = /^\/applications\/\d{1,20}(?:\/guilds\/\d{1,20})?\/commands$/;
 const SINGLE_COMMAND_ROUTE = /^\/applications\/\d{1,20}(?:\/guilds\/\d{1,20})?\/commands\/\d{1,20}$/;
-const MESSAGES_ROUTE = /^\/channels\/(\d{1,20})\/messages$/;
+
+/**
+ * Where the files of a request are uploaded first (the route that hands out upload addresses), whether that route
+ * takes the bot token, and whether the message's fields sit under `data` (an interaction callback).
+ */
+interface UploadTarget {
+  route: RouteLike;
+  bot: boolean;
+  inData: boolean;
+}
+
+const channelUploads = (match: RegExpExecArray): UploadTarget => ({ route: Routes.channelAttachments(match[1]!), bot: true, inData: false });
+const interactionUploads =
+  (inData: boolean) =>
+  (match: RegExpExecArray): UploadTarget => ({ route: Routes.interactionAttachments(match[1]!, match[2]!), bot: false, inData });
+const webhookUploads = (match: RegExpExecArray): UploadTarget => ({
+  route: Routes.webhookAttachments(match[1]!, match[2]!),
+  bot: false,
+  inData: false,
+});
+
+/** The routes that send or edit a message with files, and where each one's files go first. */
+const FILE_ROUTES: { method: string; pattern: RegExp; target: (match: RegExpExecArray) => UploadTarget }[] = [
+  { method: 'POST', pattern: /^\/channels\/(\d{1,20})\/messages$/, target: channelUploads },
+  { method: 'PATCH', pattern: /^\/channels\/(\d{1,20})\/messages\/\d{1,20}$/, target: channelUploads },
+  { method: 'POST', pattern: /^\/interactions\/(\d{1,20})\/([^/]+)\/callback$/, target: interactionUploads(true) },
+  { method: 'POST', pattern: /^\/interactions\/(\d{1,20})\/([^/]+)\/followup$/, target: interactionUploads(false) },
+  { method: 'PATCH', pattern: /^\/interactions\/(\d{1,20})\/([^/]+)\/messages\/[^/]+$/, target: interactionUploads(false) },
+  { method: 'POST', pattern: /^\/webhooks\/(\d{1,20})\/([^/]+)$/, target: webhookUploads },
+  { method: 'PATCH', pattern: /^\/webhooks\/(\d{1,20})\/([^/]+)\/messages\/\d{1,20}$/, target: webhookUploads },
+];
+
+function uploadTargetFor(method: string, routePath: string): UploadTarget | null {
+  for (const candidate of FILE_ROUTES) {
+    if (candidate.method !== method) continue;
+    const match = candidate.pattern.exec(routePath);
+    if (match) return candidate.target(match);
+  }
+  return null;
+}
+
+/** Adds uploaded files after the `attachments` a body already names (the files an edit keeps). */
+function withAttachments(body: unknown, uploaded: UploadedAttachment[], inData: boolean): Record<string, unknown> {
+  const current = (body ?? {}) as Record<string, unknown>;
+  if (inData) {
+    const data = (current.data ?? {}) as { attachments?: unknown[] };
+    return { ...current, data: { ...data, attachments: [...(data.attachments ?? []), ...uploaded] } };
+  }
+  const listed = (current as { attachments?: unknown[] }).attachments ?? [];
+  return { ...current, attachments: [...listed, ...uploaded] };
+}
+
+/**
+ * One rate limit bucket as Bisim described it in its last answer.
+ */
+export interface RateLimitBucket {
+  /** The bucket's id, `X-RateLimit-Bucket`. */
+  hash: string;
+  /** How many requests the bucket allows in its window. */
+  limit: number;
+  /** How many are left (bisim.js also counts the requests it sent since Bisim's last answer). */
+  remaining: number;
+  /** When the window ends, a timestamp in milliseconds. */
+  resetAt: number;
+  /** When a request last used the bucket. */
+  lastUsed: number;
+}
 const REASON_IN_BODY = [
   /^DELETE \/guilds\/\d{1,20}\/members\/\d{1,20}$/,
   /^PUT \/guilds\/\d{1,20}\/bans\/\d{1,20}$/,
@@ -374,6 +476,16 @@ export class REST extends EventEmitter {
    * The global limit Bisim last reported in `X-RateLimit-Limit` (600 a minute for a bot).
    */
   public globalLimit = 600;
+
+  /**
+   * Which bucket each route is in, as Bisim's `X-RateLimit-Bucket` named it, by `METHOD:/route/:id`.
+   */
+  public readonly hashes = new Map<string, { value: string; lastAccess: number }>();
+
+  /**
+   * The rate limit buckets Bisim named, by `X-RateLimit-Bucket`. The routes in one bucket share its count.
+   */
+  public readonly buckets = new Map<string, RateLimitBucket>();
 
   private token: string | null = null;
   private sweeper: NodeJS.Timeout | null = null;
@@ -491,14 +603,31 @@ export class REST extends EventEmitter {
    * @param channelId - The channel the files are for
    * @param files - The files
    */
-  public async uploadFiles(channelId: string, files: RawFile[]): Promise<UploadedAttachment[]> {
+  public uploadFiles(channelId: string, files: RawFile[]): Promise<UploadedAttachment[]> {
+    return this.uploadFilesTo(Routes.channelAttachments(channelId), files);
+  }
+
+  /**
+   * Uploads files through Bisim's presigned flow: asks `route` for upload addresses (a channel's, an interaction's
+   * or a webhook's), puts the bytes there, and returns what a message needs to carry them.
+   *
+   * @param route - The route that hands out upload addresses, such as {@link Routes.interactionAttachments}
+   * @param files - The files
+   * @param options - Whether the request sends the bot token (`auth: false` for a token route), and a signal
+   */
+  public async uploadFilesTo(
+    route: RouteLike,
+    files: RawFile[],
+    options: Pick<RequestData, 'auth' | 'authPrefix' | 'signal'> = {},
+  ): Promise<UploadedAttachment[]> {
     const prepared = await Promise.all(
       files.map(async (file) => {
         const data = await toBuffer(file.data);
         return { file, data, contentType: file.contentType ?? guessContentType(file.name) };
       }),
     );
-    const presigned = (await this.post(Routes.channelAttachments(channelId), {
+    const presigned = (await this.post(route, {
+      ...options,
       body: {
         files: prepared.map(({ file, data, contentType }) => ({
           fileName: file.name,
@@ -509,7 +638,7 @@ export class REST extends EventEmitter {
     })) as { attachments: { id: string; uploadUrl: string; uploadFilename: string }[] };
     const slots = presigned?.attachments ?? [];
     if (slots.length !== prepared.length) {
-      throw new HTTPError(500, 'Bisim returned a different number of upload slots', 'POST', Routes.channelAttachments(channelId), {
+      throw new HTTPError(500, 'Bisim returned a different number of upload slots', 'POST', route, {
         body: undefined,
         files,
       });
@@ -521,6 +650,7 @@ export class REST extends EventEmitter {
           method: 'PUT',
           headers: { 'Content-Type': contentType },
           body: data,
+          signal: options.signal ?? undefined,
         });
         if (!res.ok) throw new HTTPError(res.status, res.statusText, 'PUT', slot.uploadUrl, { body: undefined, files: [file] });
       }),
@@ -547,6 +677,57 @@ export class REST extends EventEmitter {
    */
   public debug(message: string): void {
     this.emit('restDebug', message);
+  }
+
+  /**
+   * The bucket a route is in, once Bisim has named it.
+   *
+   * @param routeKey - The route, `METHOD:/route/:id`
+   * @internal
+   */
+  public _bucketOf(routeKey: string): RateLimitBucket | null {
+    const hash = this.hashes.get(routeKey);
+    if (!hash) return null;
+    hash.lastAccess = Date.now();
+    return this.buckets.get(hash.value) ?? null;
+  }
+
+  /**
+   * Reads Bisim's rate limit headers into the bucket they name, and remembers that the route is in it.
+   *
+   * @param routeKey - The route, `METHOD:/route/:id`
+   * @param headers - The answer's headers
+   * @internal
+   */
+  public _learnBucket(routeKey: string, headers: Headers): RateLimitBucket | null {
+    const hash = headers.get('x-ratelimit-bucket');
+    if (!hash) return this._bucketOf(routeKey);
+    const now = Date.now();
+    this.hashes.set(routeKey, { value: hash, lastAccess: now });
+    const limit = Number(headers.get('x-ratelimit-limit'));
+    const remainingHeader = headers.get('x-ratelimit-remaining');
+    const remaining = remainingHeader === null ? Number.NaN : Number(remainingHeader);
+    const resetAfter = headers.get('x-ratelimit-reset-after');
+    const reset = headers.get('x-ratelimit-reset');
+    let resetAt = Number.NaN;
+    if (resetAfter !== null && Number.isFinite(Number(resetAfter))) resetAt = now + Number(resetAfter) * 1_000;
+    else if (reset !== null && Number.isFinite(Number(reset))) resetAt = Number(reset) * 1_000;
+    if (Number.isFinite(resetAt)) resetAt += this.options.offset;
+    let bucket = this.buckets.get(hash);
+    if (!bucket) {
+      bucket = { hash, limit: Number.POSITIVE_INFINITY, remaining: 1, resetAt: 0, lastUsed: now };
+      this.buckets.set(hash, bucket);
+    }
+    bucket.lastUsed = now;
+    if (Number.isFinite(limit) && limit > 0) bucket.limit = limit;
+    if (Number.isFinite(remaining)) {
+      // A later window takes Bisim's count. Within one window answers can arrive out of order, so the lower
+      // count wins.
+      const newWindow = !Number.isFinite(resetAt) || bucket.resetAt <= now || resetAt > bucket.resetAt + 1_000;
+      bucket.remaining = newWindow ? remaining : Math.min(bucket.remaining, remaining);
+    }
+    if (Number.isFinite(resetAt)) bucket.resetAt = resetAt;
+    return bucket;
   }
 
   private async queueRequest(request: InternalRequest): Promise<Response> {
@@ -581,13 +762,14 @@ export class REST extends EventEmitter {
     }
 
     if (request.files?.length) {
-      const channelId = MESSAGES_ROUTE.exec(routePath)?.[1];
-      if (!channelId || method !== 'POST') {
-        throw new BisimjsError(ErrorCodes.NotSupported, `Uploading files with ${method} ${routePath}`);
-      }
-      const uploaded = await this.uploadFiles(channelId, request.files);
-      const current = (body ?? {}) as { attachments?: unknown[] };
-      body = { ...current, attachments: [...(current.attachments ?? []), ...uploaded] };
+      const target = uploadTargetFor(method, routePath);
+      if (!target) throw new BisimjsError(ErrorCodes.NotSupported, `Uploading files with ${method} ${routePath}`);
+      const uploaded = await this.uploadFilesTo(target.route, request.files, {
+        auth: target.bot ? request.auth : false,
+        authPrefix: request.authPrefix,
+        signal: request.signal,
+      });
+      body = withAttachments(body, uploaded, target.inData);
     }
 
     const userAgent = `${DefaultUserAgent} ${this.options.userAgentAppendix}`.trim();
@@ -640,6 +822,18 @@ export class REST extends EventEmitter {
       }
     }
     if (swept.size) this.emit('handlerSweep', swept);
+    const sweptHashes = new Map<string, unknown>();
+    const now = Date.now();
+    for (const [key, hash] of this.hashes) {
+      if (now - hash.lastAccess > this.options.handlerSweepInterval) {
+        this.hashes.delete(key);
+        sweptHashes.set(key, hash);
+      }
+    }
+    for (const [hash, bucket] of this.buckets) {
+      if (bucket.resetAt < now && now - bucket.lastUsed > this.options.handlerSweepInterval) this.buckets.delete(hash);
+    }
+    if (sweptHashes.size) this.emit('hashSweep', sweptHashes);
   }
 }
 

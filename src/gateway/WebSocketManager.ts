@@ -1,12 +1,12 @@
 import { EventEmitter } from 'node:events';
 import type { Client } from '../client/Client.js';
-import { BisimjsError, ErrorCodes } from '../errors/index.js';
+import { BisimjsError, type ErrorCode, ErrorCodes } from '../errors/index.js';
 import { BisimAPIError } from '../rest/errors.js';
 import { Routes } from '../rest/Routes.js';
 import type { Guild } from '../structures/Guild.js';
 import type { RawChannelData, RawEmojiData, RawGuildData, RawVoiceStateData } from '../types/raw.js';
 import { Collection } from '../util/Collection.js';
-import { Status } from '../util/Enums.js';
+import { GatewayIntentBits, Status } from '../util/Enums.js';
 import { Events } from '../util/Events.js';
 import { type DispatchEnvelope, handlers } from './handlers.js';
 import { type GatewayFrame, GatewayConnectError, GatewayOpcodes, InternalCloseCodes, WebSocketShard } from './WebSocketShard.js';
@@ -24,6 +24,21 @@ const BEFORE_READY = new Set(['PRESENCE_SYNC', 'RESUMED']);
  * How long to wait for a server's presence snapshot after subscribing, in milliseconds.
  */
 const SUBSCRIBE_TIMEOUT = 6_000;
+
+/**
+ * The close codes the gateway refuses a connection's intents with, and the error each one becomes. The
+ * gateway closes the socket with one of these before hello; neither is ever retried.
+ */
+const INTENT_CLOSE_CODES = new Map<number, ErrorCode>([
+  [4013, ErrorCodes.InvalidIntents],
+  [4014, ErrorCodes.DisallowedIntents],
+]);
+
+/**
+ * How long a channel bisim.js learned of from CHANNEL_CREATE is spared a `ChannelUpdate` from the server
+ * refresh that follows it, in milliseconds.
+ */
+const CREATED_GRACE = 30_000;
 
 /**
  * Runs `worker` over `items`, `limit` at a time.
@@ -59,7 +74,9 @@ export class WebSocketManager extends EventEmitter {
   private bootstrapped = false;
   private everReady = false;
   private readonly subscribed = new Set<string>();
-  private readonly syncWaiters = new Map<string, () => void>();
+  private readonly syncWaiters = new Map<string, (confirmed: boolean) => void>();
+  private readonly refusals = new Map<string, number>();
+  private readonly createdChannels = new Map<string, number>();
   private readonly resyncing = new Map<string, { again: boolean; resubscribe: boolean }>();
   private presenceTimes: number[] = [];
   private presenceTimer: NodeJS.Timeout | null = null;
@@ -121,7 +138,11 @@ export class WebSocketManager extends EventEmitter {
     const appId = this.client.application?.id ?? this.client.user?.id;
     if (!appId) throw new BisimjsError(ErrorCodes.ClientNotReady, 'connect to the gateway');
     try {
-      const data = (await this.client.rest.post(Routes.applicationGateway(appId))) as { token: string; expiresInMs?: number };
+      const intents = this.client.options.intents.bitfield;
+      const data = (await this.client.rest.post(Routes.applicationGateway(appId), { body: { intents } })) as {
+        token: string;
+        expiresInMs?: number;
+      };
       return data.token;
     } catch (error) {
       if (error instanceof BisimAPIError && (error.status === 401 || error.status === 403)) throw new BisimjsError(ErrorCodes.TokenInvalid);
@@ -134,9 +155,17 @@ export class WebSocketManager extends EventEmitter {
     const pass = await this.mintPass();
     const separator = this.gateway.includes('?') ? '&' : '?';
     this.debug(`Connecting to ${this.gateway}`);
-    const interval = await this.shard.connect(`${this.gateway}${separator}token=${encodeURIComponent(pass)}`);
+    let interval: number;
+    try {
+      interval = await this.shard.connect(`${this.gateway}${separator}token=${encodeURIComponent(pass)}`);
+    } catch (error) {
+      const code = error instanceof GatewayConnectError ? INTENT_CLOSE_CODES.get(error.closeCode ?? 0) : undefined;
+      if (code) throw new BisimjsError(code);
+      throw error;
+    }
     this.debug(`Hello: heartbeat every ${interval}ms`);
     this.subscribed.clear();
+    this.refusals.clear();
     this.bootstrapped = false;
     this.sendPresence(this.client.presence.toBisim(), true);
     void this.bootstrap(reconnecting).catch((error: unknown) => {
@@ -158,6 +187,7 @@ export class WebSocketManager extends EventEmitter {
       case GatewayOpcodes.Error:
         this.debug(`The gateway refused a request: ${JSON.stringify(frame.d)}`);
         this.client.emit(Events.Warn, `The gateway refused a request: ${frame.d?.message ?? 'unknown'}`);
+        if (typeof frame.d?.guildId === 'string' && frame.d.guildId) this.onSubscribeRefused(frame.d.guildId);
         break;
       default:
         break;
@@ -172,7 +202,7 @@ export class WebSocketManager extends EventEmitter {
       const waiter = this.syncWaiters.get(d.guildId);
       if (waiter) {
         this.syncWaiters.delete(d.guildId);
-        waiter();
+        waiter(true);
       }
     }
     if (!this.bootstrapped && !BEFORE_READY.has(type)) {
@@ -206,8 +236,24 @@ export class WebSocketManager extends EventEmitter {
     this.failWaiters();
     this.subscribed.clear();
     if (this.destroyed) return;
+    const refused = INTENT_CLOSE_CODES.get(code);
+    if (refused) {
+      this.stopForIntents(new BisimjsError(refused), code);
+      return;
+    }
     const handoff = code === InternalCloseCodes.Reconnect || code === 1012;
     this.scheduleReconnect(handoff);
+  }
+
+  /**
+   * Gives up for good after the gateway refused the intents: every new attempt would be refused the same way.
+   */
+  private stopForIntents(error: BisimjsError, code: number): void {
+    this.debug(`The gateway refused the intents (${code}): not reconnecting`);
+    this.destroyed = true;
+    this.shard.status = Status.Disconnected;
+    this.client.emit(Events.ShardDisconnect, { code, reason: error.message, wasClean: true }, 0);
+    (this.client as Client<true>)._emitError(error);
   }
 
   private scheduleReconnect(handoff: boolean): void {
@@ -235,6 +281,10 @@ export class WebSocketManager extends EventEmitter {
         this.client.emit(Events.ShardDisconnect, { code: 4004, reason: 'Authentication failed', wasClean: true }, 0);
         return;
       }
+      if (error instanceof BisimjsError && (error.code === ErrorCodes.InvalidIntents || error.code === ErrorCodes.DisallowedIntents)) {
+        this.stopForIntents(error, error.code === ErrorCodes.InvalidIntents ? 4013 : 4014);
+        return;
+      }
       if (error instanceof GatewayConnectError && error.retryAfter) {
         await sleep(error.retryAfter * 1_000);
       }
@@ -244,7 +294,7 @@ export class WebSocketManager extends EventEmitter {
   }
 
   private failWaiters(): void {
-    for (const waiter of this.syncWaiters.values()) waiter();
+    for (const waiter of this.syncWaiters.values()) waiter(false);
     this.syncWaiters.clear();
   }
 
@@ -301,6 +351,8 @@ export class WebSocketManager extends EventEmitter {
 
   /**
    * Loads one server: its channels and roles, and (on first sight) its members, emojis and voice states.
+   * The member list is loaded only with the `GuildMembers` intent (without it Bisim refuses the list and
+   * sends no member events, so the cache could not be kept current); otherwise just the bot's own member.
    *
    * @internal
    */
@@ -322,7 +374,8 @@ export class WebSocketManager extends EventEmitter {
       const bootstrap = client.options.bootstrap ?? {};
       const tasks: Promise<unknown>[] = [];
       if (bootstrap.members !== false) {
-        tasks.push(guild.members.fetchAll());
+        if (client.options.intents.has(GatewayIntentBits.GuildMembers)) tasks.push(guild.members.fetchAll());
+        else tasks.push(guild.members.fetchMe({ force: true }));
       }
       if (bootstrap.emojis !== false) {
         tasks.push(
@@ -369,10 +422,15 @@ export class WebSocketManager extends EventEmitter {
       else if (!current.equals(previous)) client.emit(Events.GuildRoleUpdate, previous, current);
     }
     for (const [id, role] of guild.roles.cache) if (!oldRoles.has(id)) client.emit(Events.GuildRoleCreate, role);
+    const now = Date.now();
     for (const [id, previous] of oldChannels) {
       const current = guild.channels.cache.get(id);
+      const created = this.createdChannels.get(id);
+      if (created !== undefined) this.createdChannels.delete(id);
       if (!current) client.emit(Events.ChannelDelete, previous);
-      else if (
+      else if (created !== undefined && now - created < CREATED_GRACE) {
+        // CHANNEL_CREATE emitted it already: this refresh only fills in what the event did not carry.
+      } else if (
         !current.equals(previous as never) ||
         (current as unknown as { topic?: unknown }).topic !== (previous as unknown as { topic?: unknown }).topic ||
         current.nsfw !== previous.nsfw ||
@@ -396,6 +454,13 @@ export class WebSocketManager extends EventEmitter {
   public async subscribeGuild(guildId: string, attempt = 0): Promise<boolean> {
     if (this.subscribed.has(guildId)) return true;
     if (!this.shard.open) return false;
+    if (!this.confirmsSubscriptions) {
+      // Without the GuildPresences intent no snapshot comes back, so nothing confirms a subscription: it
+      // stands unless the gateway refuses it (op 10 naming the server, see onSubscribeRefused).
+      this.subscribed.add(guildId);
+      await this.shard.send({ op: GatewayOpcodes.Subscribe, d: { guildId } });
+      return this.shard.open;
+    }
     let synced = false;
     const done = new Promise<void>((resolve) => {
       const timer = setTimeout(() => {
@@ -403,9 +468,9 @@ export class WebSocketManager extends EventEmitter {
         resolve();
       }, SUBSCRIBE_TIMEOUT);
       timer.unref?.();
-      this.syncWaiters.set(guildId, () => {
+      this.syncWaiters.set(guildId, (confirmed) => {
         clearTimeout(timer);
-        synced = this.shard.open;
+        synced = confirmed && this.shard.open;
         resolve();
       });
     });
@@ -428,6 +493,48 @@ export class WebSocketManager extends EventEmitter {
       }
     }
     return this.subscribeGuild(guildId, attempt + 1);
+  }
+
+  /**
+   * Whether the gateway confirms a subscription with the server's presence snapshot, which it sends only to
+   * a connection with the `GuildPresences` intent.
+   */
+  private get confirmsSubscriptions(): boolean {
+    return this.client.options.intents.has(GatewayIntentBits.GuildPresences);
+  }
+
+  /**
+   * The gateway refused a subscription (op 10 naming the server). A subscribe still waiting for its snapshot
+   * learns it at once; one that counted without a snapshot is tried again after loading the server again
+   * (that warms the gateway's permission cache), twice at most per connection.
+   */
+  private onSubscribeRefused(guildId: string): void {
+    const waiter = this.syncWaiters.get(guildId);
+    if (waiter) {
+      this.syncWaiters.delete(guildId);
+      waiter(false);
+      return;
+    }
+    if (this.confirmsSubscriptions || !this.subscribed.has(guildId)) return;
+    this.subscribed.delete(guildId);
+    const tries = (this.refusals.get(guildId) ?? 0) + 1;
+    this.refusals.set(guildId, tries);
+    if (tries > 2) {
+      this.client.emit(Events.Warn, `The gateway refused the subscription to server ${guildId}`);
+      return;
+    }
+    if (this.client.guilds.cache.has(guildId)) this.queueResync(guildId);
+  }
+
+  /**
+   * Notes a channel CHANNEL_CREATE added, so the server refresh that follows does not emit it again.
+   *
+   * @internal
+   */
+  public _channelCreated(channelId: string): void {
+    const now = Date.now();
+    for (const [id, at] of this.createdChannels) if (now - at >= CREATED_GRACE) this.createdChannels.delete(id);
+    this.createdChannels.set(channelId, now);
   }
 
   /**

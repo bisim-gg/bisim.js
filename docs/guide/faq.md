@@ -8,6 +8,15 @@ client.user.setActivity('the server', { type: ActivityType.Watching });
 client.user.setStatus('dnd');
 ```
 
+## How do I change the bot's picture?
+
+```js
+await client.user.setAvatar('./avatar.png'); // a path, a URL, a Buffer or a data: URI
+await client.user.setBanner(null); // removes the banner
+```
+
+The bot's name is its application's: change it in the Developer Portal, or with `client.user.setUsername()`.
+
 ## How do I send a message to a specific channel?
 
 ```js
@@ -35,9 +44,19 @@ Put the user, member, role or channel in a template string: `${user}` becomes `<
 const url = user.displayAvatarURL({ size: 256 });
 ```
 
-## Why do I not need the Message Content intent?
+## Why is `message.content` empty?
 
-Bisim has no intents. A bot sees the content of every message in channels it can read.
+The bot has no Message Content intent. Without it, a message arrives with empty text, and without embeds,
+files, components and polls, except the bot's own messages, messages that mention it, and DMs. Add
+`GatewayIntentBits.MessageContent` to the client's intents and switch it on in the Developer Portal
+([bisim.gg/developers](https://bisim.gg/developers), your app, **Bot**, **Privileged Gateway Intents**).
+Slash commands need no intent.
+
+## Why does `login()` reject with `DisallowedIntents`?
+
+The client asks for a privileged intent (`GuildMembers`, `GuildPresences` or `MessageContent`) that is not
+switched on for the app. Switch it on in the Developer Portal, or remove it from the intents. From 100
+servers on, Bisim must approve it too.
 
 ## My bot does not see a channel. Why?
 
@@ -53,7 +72,7 @@ A bot is an ordinary member: it sees what its roles allow. Give its role View Ch
 ## "The application did not respond"
 
 Your bot must answer an interaction within three seconds. If the work takes longer, call `deferReply()`
-first, then `editReply()` when you are done.
+first, then `editReply()` (or `followUp()`) when you are done.
 
 ## How do I check which features are missing?
 
@@ -95,7 +114,7 @@ Yes, with [@bisim/voice](./voice/index.md), the counterpart of `@discordjs/voice
 Yes. Point the client at it with `rest.api` and `ws.gateway`:
 
 ```js
-new Client({ intents: [], rest: { api: 'http://localhost:3000/api' }, ws: { gateway: 'ws://localhost:4000/ws' } });
+new Client({ intents: [GatewayIntentBits.Guilds], rest: { api: 'http://localhost:3000/api' }, ws: { gateway: 'ws://localhost:4000/ws' } });
 ```
 
 ## Where is the full API?

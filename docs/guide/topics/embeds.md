@@ -48,10 +48,20 @@ await interaction.reply({
 | thumbnail, beside the text | yes |
 | image, below the fields | yes |
 
-A picture is an `http` or `https` link of at most 2048 characters, and every reader's app loads it from that
-address, as Discord's did. Discord's `attachment://name.png` is not supported yet: bisim.js leaves such a picture
-out of the message and writes a warning once. To show a file you made, send it as a file (see
-[Messages and reactions](./messages.md)), or put it somewhere with a public link first.
+A picture is an `http` or `https` link of at most 2048 characters, which every reader's app loads from that
+address, or `attachment://name` for a file sent with the same message, as on Discord:
+
+```js
+const { AttachmentBuilder, EmbedBuilder } = require('bisim.js');
+
+const chart = new AttachmentBuilder('./chart.png', { name: 'chart.png' });
+const embed = new EmbedBuilder().setTitle('This week').setImage('attachment://chart.png');
+await channel.send({ embeds: [embed], files: [chart] });
+```
+
+This works wherever a message takes files: `channel.send()`, interaction answers, webhooks, and edits, where it
+may also name a file the message keeps. An `attachment://` that names no file of the message is left out, with
+a warning once, since Bisim would refuse the whole message for it.
 
 ## Colours
 

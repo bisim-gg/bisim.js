@@ -1,3 +1,5 @@
+import type { RawAuditLogEntry } from '../structures/GuildAuditLogs.js';
+import type { RawSoundboardSoundData } from '../structures/SoundboardSound.js';
 import type {
   RawAttachmentData,
   RawChannelData,
@@ -5,6 +7,7 @@ import type {
   RawEmbedData,
   RawEmojiData,
   RawGuildData,
+  RawInviteData,
   RawMemberData,
   RawMessageData,
   RawPollData,
@@ -108,6 +111,9 @@ function normalizeComponent(data: Loose): RawComponentData {
     }));
   }
   if (data.channelTypes?.length) component.channelTypes = data.channelTypes;
+  if (data.defaultValues?.length) {
+    component.defaultValues = data.defaultValues.map((value: Loose) => ({ id: value.id ?? '', type: value.type ?? '' }));
+  }
   if (data.components) component.components = data.components.map((nested: Loose) => normalizeComponent(nested));
   return component;
 }
@@ -139,7 +145,16 @@ export function normalizeMessage(data: Loose, guildId?: string | null): RawMessa
     ephemeral: Boolean(data.ephemeral),
     components: (data.components ?? []).map((row: Loose) => normalizeComponent(row)),
     loading: Boolean(data.loading),
+    flags: Number(data.flags ?? 0),
   };
+  // The mention lists are left out when empty, and an older server never sends them (nor `member`): when
+  // none of these is here, Message reads the mentions from the text instead.
+  if ('mentions' in data || 'mentionRoleIds' in data || 'mentionEveryone' in data || 'member' in data) {
+    message.mentions = (data.mentions ?? []).map((user: Loose) => normalizeUser(user));
+    message.mentionRoleIds = data.mentionRoleIds ?? [];
+    message.mentionEveryone = Boolean(data.mentionEveryone);
+  }
+  if (data.member) message.member = normalizeMember(data.member, message.guildId ?? undefined);
   return message;
 }
 
@@ -182,6 +197,59 @@ export function normalizeChannelUpdate(data: Loose): Partial<RawChannelData> & {
     nsfw: Boolean(data.nsfw),
     slowmodeSec: data.slowmodeSec ?? 0,
     permissionsSynced: Boolean(data.permissionsSynced),
+  };
+}
+
+/** A whole channel from CHANNEL_CREATE or CHANNEL_DELETE, which carry its type and server too. */
+export function normalizeChannel(data: Loose, guildId?: string): RawChannelData {
+  return {
+    ...normalizeChannelUpdate(data),
+    guildId: orNull(data.guildId) ?? guildId ?? null,
+    type: data.type || 'GUILD_TEXT',
+  };
+}
+
+/** An invite from INVITE_CREATE (`maxAge` is in seconds, 0 for ever). */
+export function normalizeInvite(data: Loose): RawInviteData {
+  const inviter = data.inviter?.id ? normalizeUser(data.inviter) : null;
+  return {
+    code: data.code,
+    guildId: data.guildId || undefined,
+    channelId: orNull(data.channelId),
+    inviter,
+    inviterId: inviter?.id,
+    maxUses: data.maxUses ?? 0,
+    uses: data.uses ?? 0,
+    maxAgeSec: data.maxAge ?? 0,
+    createdAt: orNull(data.createdAt) ?? undefined,
+    expiresAt: orNull(data.expiresAt),
+  };
+}
+
+/** An audit log entry from GUILD_AUDIT_LOG_ENTRY_CREATE, in the shape REST gives it. */
+export function normalizeAuditLogEntry(data: Loose): RawAuditLogEntry {
+  let meta: Record<string, unknown> | null = null;
+  if (data.metaJson) {
+    try {
+      const parsed: unknown = JSON.parse(data.metaJson);
+      if (parsed && typeof parsed === 'object') meta = parsed as Record<string, unknown>;
+    } catch {
+      meta = null;
+    }
+  }
+  const reason = orNull(data.reason);
+  if (reason && meta?.reason === undefined) meta = { ...meta, reason };
+  return {
+    id: data.id,
+    guildId: data.guildId || undefined,
+    actorId: orNull(data.userId),
+    action: data.action ?? '',
+    targetType: orNull(data.targetType),
+    targetId: orNull(data.targetId),
+    meta,
+    createdAt: data.createdAt ?? '',
+    actor: null,
+    target: null,
   };
 }
 
@@ -229,6 +297,20 @@ export function normalizeVoiceState(data: Loose, channelId: string | null, guild
     selfDeafened: Boolean(data.selfDeafened),
     selfVideo: Boolean(data.selfVideo),
     selfStream: Boolean(data.selfStream),
+  };
+}
+
+/** A soundboard sound from GUILD_SOUND_CREATE, GUILD_SOUND_UPDATE or SOUNDBOARD_PLAY (a volume of 0 is left out). */
+export function normalizeSound(data: Loose): RawSoundboardSoundData {
+  return {
+    id: data.id,
+    guildId: orNull(data.guildId) ?? undefined,
+    name: data.name ?? '',
+    objectKey: data.objectKey ?? '',
+    emojiName: orNull(data.emojiName),
+    volume: data.volume ?? 0,
+    durationMs: data.durationMs ?? 0,
+    creatorId: orNull(data.creatorId),
   };
 }
 

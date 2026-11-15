@@ -1,4 +1,4 @@
-import { BisimjsError, ErrorCodes } from '../errors/index.js';
+import { BisimjsError, BisimjsTypeError, ErrorCodes } from '../errors/index.js';
 import { isRouteMissing } from '../rest/missing.js';
 import { Routes } from '../rest/Routes.js';
 import type { Guild } from '../structures/Guild.js';
@@ -6,7 +6,6 @@ import { GuildBan } from '../structures/GuildBan.js';
 import type { User } from '../structures/User.js';
 import type { RawBanData } from '../types/raw.js';
 import { Collection } from '../util/Collection.js';
-import { notSupported } from '../util/Util.js';
 import { CachedManager } from './BaseManager.js';
 import type { UserResolvable } from './UserManager.js';
 import { attachHidden } from '../util/internal.js';
@@ -25,6 +24,26 @@ export interface BanOptions {
   deleteMessageDays?: number;
   /** Why (for the audit log). */
   reason?: string;
+}
+
+/**
+ * Options for banning many users at once.
+ */
+export interface BulkBanOptions {
+  /** How many seconds of their messages to delete (0 to 604800). */
+  deleteMessageSeconds?: number;
+  /** Why (for the audit log). */
+  reason?: string;
+}
+
+/**
+ * What {@link GuildBanManager.bulkCreate} resolves with.
+ */
+export interface BulkBanResult {
+  /** The ids of those banned. */
+  bannedUsers: string[];
+  /** The ids of those that could not be banned (the owner, someone above the bot, an unknown id). */
+  failedUsers: string[];
 }
 
 /**
@@ -131,9 +150,33 @@ export class GuildBanManager extends CachedManager<string, GuildBan, UserResolva
     throw banning ? new BisimjsError(ErrorCodes.BanResolveId, true) : new BisimjsError(ErrorCodes.BanResolveId);
   }
 
-  /** Not on Bisim: banning many users at once. */
-  public bulkCreate(_users: unknown, _options?: unknown): Promise<never> {
-    return notSupported('Banning many users at once');
+  /**
+   * Bans up to 200 users at once (needs Ban Members and Manage Server). Bisim answers 400 `BULK_BAN_FAILED` when
+   * nobody could be banned.
+   *
+   * @param users - The users
+   * @param options - The reason and how much of their history to delete
+   * @example
+   * ```js
+   * const { bannedUsers, failedUsers } = await guild.bans.bulkCreate(['123', '456'], { deleteMessageSeconds: 3600 });
+   * ```
+   */
+  public async bulkCreate(
+    users: readonly UserResolvable[] | Collection<string, UserResolvable>,
+    options: BulkBanOptions = {},
+  ): Promise<BulkBanResult> {
+    const list = users instanceof Collection ? [...users.values()] : Array.isArray(users) ? [...users] : null;
+    if (list === null) throw new BisimjsTypeError(ErrorCodes.InvalidType, 'users', 'list or Collection of users');
+    if (!options || typeof options !== 'object') throw new BisimjsTypeError(ErrorCodes.InvalidType, 'options', 'object', true);
+    const userIds = [...new Set(list.map((user) => this.client.users.resolveId(user)).filter((id): id is string => Boolean(id)))];
+    if (!userIds.length) throw new BisimjsError(ErrorCodes.BulkBanUsersOptionEmpty);
+    const body: Record<string, unknown> = { userIds };
+    if (options.deleteMessageSeconds !== undefined) {
+      body.deleteMessageSeconds = Math.min(604_800, Math.max(0, Math.floor(options.deleteMessageSeconds)));
+    }
+    if (options.reason) body.reason = options.reason;
+    const result = (await this.client.rest.post(Routes.guildBulkBan(this.guild.id), { body, reason: options.reason })) as Partial<BulkBanResult>;
+    return { bannedUsers: result?.bannedUsers ?? [], failedUsers: result?.failedUsers ?? [] };
   }
 }
 

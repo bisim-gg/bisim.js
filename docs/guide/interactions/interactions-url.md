@@ -8,8 +8,8 @@ Use it when your bot runs as a web service that answers commands and does not ne
 
 ## Setting it up
 
-1. In Bisim, open **Settings**, **Applications**, your application, and fill in **Interactions URL** with a
-   public `https` address.
+1. In the Developer Portal ([bisim.gg/developers](https://bisim.gg/developers)), open your application's
+   **General Information** page and fill in **Interactions Endpoint URL** with a public `https` address.
 2. Bisim checks the address when you save it: it sends a **PING** that must be answered with `{ "type": 1 }`,
    and a request with a deliberately bad signature that must be refused with status 401.
 3. Copy the **public key** from the same page. You need it to check signatures.

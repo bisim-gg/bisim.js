@@ -342,8 +342,7 @@ export enum ReactionType {
 }
 
 /**
- * The kinds of mention `allowedMentions.parse` names. Accepted for compatibility; Bisim does not filter
- * mentions yet.
+ * The kinds of mention `allowedMentions.parse` names.
  */
 export enum AllowedMentionsTypes {
   Everyone = 'everyone',
@@ -451,8 +450,10 @@ export enum Partials {
 }
 
 /**
- * The gateway intents. Bisim accepts them for compatibility and ignores them: a bot receives what its
- * permissions let it see.
+ * The gateway intents, with Discord's bits. The client sends them when it connects and Bisim delivers only the
+ * events they cover. `GuildMembers`, `GuildPresences` and `MessageContent` are privileged: they must be
+ * switched on for the app in the Developer Portal (bisim.gg/developers, your app, Bot, Privileged Gateway
+ * Intents), or the connection is refused with `DisallowedIntents`.
  */
 export enum GatewayIntentBits {
   Guilds = 1 << 0,
@@ -480,6 +481,124 @@ export enum GatewayIntentBits {
   AutoModerationExecution = 1 << 21,
   GuildMessagePolls = 1 << 24,
   DirectMessagePolls = 1 << 25,
+}
+
+/**
+ * What an audit log entry records, with Discord's numbers. Bisim names its actions instead
+ * (`MEMBER_BAN`...); bisim.js turns each name into its number here, and keeps the name in
+ * `GuildAuditLogsEntry.actionName`. Values with no Bisim action are listed for compatibility.
+ */
+export enum AuditLogEvent {
+  GuildUpdate = 1,
+  ChannelCreate = 10,
+  ChannelUpdate = 11,
+  ChannelDelete = 12,
+  ChannelOverwriteCreate = 13,
+  ChannelOverwriteUpdate = 14,
+  ChannelOverwriteDelete = 15,
+  MemberKick = 20,
+  MemberPrune = 21,
+  MemberBanAdd = 22,
+  MemberBanRemove = 23,
+  MemberUpdate = 24,
+  MemberRoleUpdate = 25,
+  MemberMove = 26,
+  MemberDisconnect = 27,
+  BotAdd = 28,
+  RoleCreate = 30,
+  RoleUpdate = 31,
+  RoleDelete = 32,
+  InviteCreate = 40,
+  InviteUpdate = 41,
+  InviteDelete = 42,
+  WebhookCreate = 50,
+  WebhookUpdate = 51,
+  WebhookDelete = 52,
+  EmojiCreate = 60,
+  EmojiUpdate = 61,
+  EmojiDelete = 62,
+  MessageDelete = 72,
+  MessageBulkDelete = 73,
+  MessagePin = 74,
+  MessageUnpin = 75,
+  IntegrationCreate = 80,
+  IntegrationUpdate = 81,
+  IntegrationDelete = 82,
+  StageInstanceCreate = 83,
+  StageInstanceUpdate = 84,
+  StageInstanceDelete = 85,
+  StickerCreate = 90,
+  StickerUpdate = 91,
+  StickerDelete = 92,
+  GuildScheduledEventCreate = 100,
+  GuildScheduledEventUpdate = 101,
+  GuildScheduledEventDelete = 102,
+  ThreadCreate = 110,
+  ThreadUpdate = 111,
+  ThreadDelete = 112,
+  ApplicationCommandPermissionUpdate = 121,
+  SoundboardSoundCreate = 130,
+  SoundboardSoundUpdate = 131,
+  SoundboardSoundDelete = 132,
+  AutoModerationRuleCreate = 140,
+  AutoModerationRuleUpdate = 141,
+  AutoModerationRuleDelete = 142,
+  AutoModerationBlockMessage = 143,
+  AutoModerationFlagToChannel = 144,
+  AutoModerationUserCommunicationDisabled = 145,
+  CreatorMonetizationRequestCreated = 150,
+  CreatorMonetizationTermsAccepted = 151,
+  OnboardingPromptCreate = 163,
+  OnboardingPromptUpdate = 164,
+  OnboardingPromptDelete = 165,
+  OnboardingCreate = 166,
+  OnboardingUpdate = 167,
+  HomeSettingsCreate = 190,
+  HomeSettingsUpdate = 191,
+  VoiceChannelStatusUpdate = 192,
+  VoiceChannelStatusDelete = 193,
+}
+
+/**
+ * When an AutoMod rule runs: Bisim's `MESSAGE_SEND` and `MEMBER_UPDATE`.
+ */
+export enum AutoModerationRuleEventType {
+  MessageSend = 1,
+  MemberUpdate = 2,
+}
+
+/**
+ * What an AutoMod rule looks for: Bisim's `KEYWORD`, `SPAM`, `KEYWORD_PRESET` and `MENTION_SPAM`.
+ */
+export enum AutoModerationRuleTriggerType {
+  Keyword = 1,
+  Spam = 3,
+  KeywordPreset = 4,
+  MentionSpam = 5,
+  MemberProfile = 6,
+}
+
+/**
+ * The word lists a keyword preset rule uses: Bisim's `PROFANITY`, `SEXUAL` and `SLURS`.
+ */
+export enum AutoModerationRuleKeywordPresetType {
+  Profanity = 1,
+  SexualContent = 2,
+  Slurs = 3,
+}
+
+/**
+ * What an AutoMod rule does when it matches.
+ */
+export enum AutoModerationActionType {
+  /** Stops the message (with an optional text shown to its sender). */
+  BlockMessage = 1,
+  /** Posts an alert in a channel. */
+  SendAlertMessage = 2,
+  /** Times the member out. */
+  Timeout = 3,
+  /** Not on Bisim. */
+  BlockMemberInteraction = 4,
 }
 
 /**

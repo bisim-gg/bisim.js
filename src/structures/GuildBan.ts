@@ -13,8 +13,8 @@ export class GuildBan extends Base {
   public declare readonly guild: Guild;
   /** The banned user. */
   public user!: User;
-  /** Why they were banned. */
-  public reason!: string | null;
+  /** Why they were banned; left out of a ban from an event (a partial ban: `fetch()` it). */
+  public reason?: string | null;
   /** Who banned them (Bisim's own addition). */
   public bannedById!: string | null;
   /** When they were banned, in milliseconds. */
@@ -28,7 +28,6 @@ export class GuildBan extends Base {
   public constructor(client: Client, data: RawBanData, guild: Guild) {
     super(client);
     attachHidden(this, 'guild', guild);
-    this.reason = null;
     this.bannedById = null;
     this.createdTimestamp = null;
     this._patch(data);
@@ -43,7 +42,7 @@ export class GuildBan extends Base {
   }
 
   /**
-   * Whether this ban is partial.
+   * Whether this ban is partial: it came from `GuildBanAdd` or `GuildBanRemove`, which carry no reason.
    */
   public get partial(): boolean {
     return !('reason' in this);

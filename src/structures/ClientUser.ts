@@ -1,7 +1,7 @@
 import type { RawUserData } from '../types/raw.js';
 import { Routes } from '../rest/Routes.js';
 import { ActivityType } from '../util/Enums.js';
-import { notSupported } from '../util/Util.js';
+import { type ImageResolvable, imageForm } from '../util/images.js';
 import type { ActivityOptions, ClientPresence, PresenceStatusData, PresenceUpdateData } from './Presence.js';
 import { User } from './User.js';
 
@@ -9,9 +9,12 @@ import { User } from './User.js';
  * Data for {@link ClientUser.edit}.
  */
 export interface ClientUserEditOptions {
+  /** The bot's name (renames its application). */
   username?: string;
-  avatar?: unknown;
-  banner?: unknown;
+  /** The picture: a Buffer, a path, a URL or a `data:` URI; `null` takes it off. */
+  avatar?: ImageResolvable | null;
+  /** The banner, the same way; `null` takes it off. */
+  banner?: ImageResolvable | null;
 }
 
 /**
@@ -39,14 +42,14 @@ export class ClientUser extends User {
   }
 
   /**
-   * Changes the bot's name. On Bisim a bot is named after its application, so this renames the application.
-   * Avatars and banners of bots are set in the app's settings, not through the API.
+   * Changes the bot's picture, banner or name. On Bisim a bot is named after its application, so a new name renames
+   * the application.
    *
    * @param options - What to change
    */
   public async edit(options: ClientUserEditOptions): Promise<this> {
-    if (options.avatar !== undefined) notSupported("Changing a bot's avatar through the API");
-    if (options.banner !== undefined) notSupported("Changing a bot's banner through the API");
+    if (options.avatar !== undefined) await this.setPicture(Routes.currentUserAvatar(), options.avatar);
+    if (options.banner !== undefined) await this.setPicture(Routes.currentUserBanner(), options.banner);
     if (options.username !== undefined) {
       await this.client.rest.patch(Routes.application(this.id), { body: { name: options.username } });
       const me = (await this.client.rest.get(Routes.user())) as RawUserData;
@@ -66,17 +69,40 @@ export class ClientUser extends User {
   }
 
   /**
-   * Not on Bisim: a bot's avatar is set in the app's settings.
+   * Sets the bot's picture.
+   *
+   * @param avatar - A Buffer, a path, a URL or a `data:` URI; `null` takes it off
+   * @example
+   * ```js
+   * await client.user.setAvatar('./avatar.png');
+   * ```
    */
-  public setAvatar(_avatar: unknown): Promise<this> {
-    return notSupported("Changing a bot's avatar through the API");
+  public setAvatar(avatar: ImageResolvable | null): Promise<this> {
+    return this.edit({ avatar });
   }
 
   /**
-   * Not on Bisim: a bot's banner is set in the app's settings.
+   * Sets the bot's banner.
+   *
+   * @param banner - A Buffer, a path, a URL or a `data:` URI; `null` takes it off
    */
-  public setBanner(_banner: unknown): Promise<this> {
-    return notSupported("Changing a bot's banner through the API");
+  public setBanner(banner: ImageResolvable | null): Promise<this> {
+    return this.edit({ banner });
+  }
+
+  /** Uploads (or with `null` removes) the picture or banner, and takes the new keys. */
+  private async setPicture(route: `/${string}`, image: ImageResolvable | null): Promise<void> {
+    const data =
+      image === null
+        ? await this.client.rest.delete(route)
+        : await this.client.rest.post(route, { body: await imageForm(image), passThroughBody: true });
+    if (data && typeof data === 'object') {
+      const profile = data as { avatarKey?: string | null; bannerKey?: string | null };
+      const patch: Partial<RawUserData> & { bannerKey?: string | null } = {};
+      if ('avatarKey' in profile) patch.avatarKey = profile.avatarKey ?? null;
+      if ('bannerKey' in profile) patch.bannerKey = profile.bannerKey ?? null;
+      this._patch(patch);
+    }
   }
 
   /**

@@ -5,8 +5,10 @@ Create `index.js` in your project folder:
 ```js
 const { Client, Events, GatewayIntentBits } = require('bisim.js');
 
-// One client per bot. The intents are accepted so discord.js code runs unchanged.
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
+// One client per bot. The intents say which events it receives.
+const client = new Client({
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
+});
 
 // Runs once, after every server has been loaded.
 client.once(Events.ClientReady, (readyClient) => {
@@ -23,6 +25,9 @@ client.on(Events.MessageCreate, async (message) => {
 client.login(process.env.BISIM_TOKEN);
 ```
 
+`MessageContent` is a privileged intent, needed here to read `!ping`: switch it on first in the Developer
+Portal ([bisim.gg/developers](https://bisim.gg/developers), your app, **Bot**, **Privileged Gateway Intents**).
+
 Run it:
 
 ```sh
@@ -34,10 +39,11 @@ and it answers.
 
 ## What happened
 
-- `new Client()` creates the client. `intents` is required, as in discord.js, but Bisim ignores it: a bot
-  receives every event its permissions let it see. See [The gateway and intents](./topics/gateway.md).
+- `new Client()` creates the client. `intents` is required, as in discord.js: `Guilds` for the servers,
+  `GuildMessages` for messages in them, and `MessageContent` for their text. See
+  [The gateway and intents](./topics/gateway.md#intents).
 - `client.login()` checks the token, connects to Bisim's gateway, and loads every server the bot is in:
-  channels, roles, members, emojis and voice states.
+  channels, roles, emojis and voice states.
 - `Events.ClientReady` fires once, when everything is loaded. Its argument is the client itself, ready to
   use: `readyClient.user` is the bot, `readyClient.guilds.cache` holds its servers.
 - `Events.MessageCreate` fires for every message the bot can see, including its own. That is why the
@@ -65,7 +71,7 @@ Every address bisim.js uses can be changed, for example to point a bot at a Bisi
 
 ```js
 const client = new Client({
-  intents: [],
+  intents: [GatewayIntentBits.Guilds],
   rest: { api: 'http://localhost:3000/api' },
   ws: { gateway: 'ws://localhost:4000/ws' },
 });

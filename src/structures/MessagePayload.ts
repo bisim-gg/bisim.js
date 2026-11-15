@@ -13,16 +13,28 @@ import { MessageFlagsBitField, type MessageFlagsString } from '../util/IntentsBi
 import { toBisimComponent } from '../util/Transformers.js';
 import type { BitFieldResolvable } from '../util/BitField.js';
 import { type PollData, pollToBisim } from './Poll.js';
+import type { Attachment } from './Attachment.js';
 
 /**
- * Which mentions in a message ping. Accepted for compatibility: Bisim does not filter mentions yet.
+ * Which mentions in a message ping, Discord's `allowed_mentions`. Left out, every mention in the text pings; given,
+ * only what it names does, so `{ parse: [] }` pings nobody. A mention that may not ping stays in the text as plain
+ * words. The client's `allowedMentions` option is the default for every message.
  */
 export interface MessageMentionOptions {
+  /** The kinds that may ping: `users` (anyone named), `roles` (any role named) and `everyone` (`@everyone` and `@here`). */
   parse?: readonly ('everyone' | 'roles' | 'users')[];
+  /** Roles that may be pinged (up to 100). */
   roles?: readonly string[];
+  /** People who may be pinged (up to 100). */
   users?: readonly string[];
+  /** Accepted for compatibility: a reply pings nobody on Bisim. */
   repliedUser?: boolean;
 }
+
+/**
+ * A file a message already has, to keep it in an edit: the {@link Attachment}, `{ id }` or its id.
+ */
+export type AttachmentKeepResolvable = Attachment | { id: string; name?: string | null } | string;
 
 /**
  * A file to attach: an {@link AttachmentBuilder}, an object with the data and a name, a Buffer, a path, a URL
@@ -57,7 +69,7 @@ export interface BaseMessageOptions {
   components?: readonly (JSONEncodable<RawComponentData> | RawComponentData | Record<string, unknown>)[];
   /** Files to attach. */
   files?: readonly AttachmentPayload[];
-  /** Accepted for compatibility: Bisim does not filter mentions yet. */
+  /** Which mentions ping (the client's `allowedMentions` when left out). */
   allowedMentions?: MessageMentionOptions;
 }
 
@@ -75,7 +87,7 @@ export interface MessageCreateOptions extends BaseMessageOptions {
   reply?: ReplyOptions;
   /** A sticker to send (Bisim sends a sticker as a message of its own). */
   stickers?: readonly ({ id: string } | string)[];
-  /** Message flags (Bisim keeps `SuppressNotifications` and `SuppressEmbeds` for bots). */
+  /** Message flags: `SuppressEmbeds` and `SuppressNotifications` (a silent message). */
   flags?: BitFieldResolvable<MessageFlagsString, number>;
   /** A poll. */
   poll?: PollData | JSONEncodable<PollData>;
@@ -90,14 +102,15 @@ export interface MessageReplyOptions extends Omit<MessageCreateOptions, 'reply'>
 }
 
 /**
- * Options for editing a message.
+ * Options for editing a message. As on Discord, `attachments` is the whole list of files the message keeps and
+ * `files` adds new ones; with neither, every file stays, and with `files` alone the old files are replaced.
  */
 export interface MessageEditOptions extends Omit<BaseMessageOptions, 'files'> {
-  /** Not on Bisim: adding files when editing. */
+  /** New files to add. */
   files?: readonly AttachmentPayload[];
-  /** Not on Bisim: changing the attachments when editing. */
-  attachments?: readonly unknown[];
-  /** Message flags. */
+  /** The files the message keeps (`[]` removes them all). */
+  attachments?: readonly AttachmentKeepResolvable[];
+  /** Message flags: an edit changes `SuppressEmbeds` only. */
   flags?: BitFieldResolvable<MessageFlagsString, number>;
 }
 
@@ -113,9 +126,9 @@ export interface InteractionReplyOptions extends BaseMessageOptions {
   fetchReply?: boolean;
   /** Whether to resolve with an {@link InteractionCallbackResponse}. */
   withResponse?: boolean;
-  /** Message flags (`Ephemeral` is what Bisim reads). */
+  /** Message flags: `Ephemeral`, `SuppressEmbeds` and `SuppressNotifications`. */
   flags?: BitFieldResolvable<MessageFlagsString, number>;
-  /** A poll. */
+  /** A poll, sent on its own (no text, embeds, files or components with it) and never ephemeral. */
   poll?: PollData | JSONEncodable<PollData>;
 }
 
@@ -149,8 +162,18 @@ export interface WebhookMessageCreateOptions extends BaseMessageOptions {
   threadName?: string;
   /** Not on Bisim: text to speech. */
   tts?: boolean;
-  /** Message flags. */
+  /** Message flags: `SuppressEmbeds` and `SuppressNotifications`. */
   flags?: BitFieldResolvable<MessageFlagsString, number>;
+}
+
+/**
+ * Options for editing a message a webhook posted.
+ */
+export interface WebhookMessageEditOptions extends MessageEditOptions {
+  /** Not on Bisim: threads. */
+  threadId?: string;
+  /** Accepted for compatibility. */
+  withComponents?: boolean;
 }
 
 /**
@@ -187,6 +210,11 @@ export class MessagePayload {
   public files: RawFile[] | null = null;
   /** What the payload is for. */
   public kind: PayloadKind;
+  /**
+   * The files the edited message has now, when known: an edit that leaves `attachments` out keeps them, and an
+   * embed may show one of them with `attachment://name`. `null` when the message is not known.
+   */
+  public existingAttachments: readonly { id: string; name: string }[] | null = null;
 
   /**
    * @param target - What the payload is sent to
@@ -252,13 +280,15 @@ export class MessagePayload {
       body.content = `<sticker:${typeof sticker === 'string' ? sticker : sticker.id}>`;
     }
 
-    if (options.embeds !== undefined) body.embeds = options.embeds.map((embed) => toBisimEmbed(embed));
+    if (options.embeds !== undefined) {
+      const attachmentNames = this.attachmentNames();
+      body.embeds = options.embeds.map((embed) => toBisimEmbed(embed, { attachmentNames }));
+    }
     if (options.components !== undefined) body.components = options.components.map((component) => toBisimComponent(component));
 
     if (options.tts) warnOnce('tts', 'Text to speech messages are not supported on Bisim: tts is ignored.');
-    if (options.allowedMentions) {
-      warnOnce('allowedMentions', 'allowedMentions is accepted but Bisim does not filter mentions yet.');
-    }
+    const allowedMentions = options.allowedMentions === undefined ? this.defaultAllowedMentions() : options.allowedMentions;
+    if (allowedMentions) body.allowedMentions = toBisimAllowedMentions(allowedMentions);
 
     if (this.kind === 'message') {
       if (options.nonce !== undefined) body.nonce = String(options.nonce);
@@ -278,9 +308,11 @@ export class MessagePayload {
     }
 
     if (this.kind === 'edit') {
-      if (options.attachments !== undefined) throw new BisimjsError(ErrorCodes.NotSupported, 'Changing attachments when editing a message');
-      const flags = this.resolveFlags();
-      if (flags) body.flags = flags;
+      if (options.attachments !== undefined) body.attachments = options.attachments.map((attachment) => ({ id: keptAttachmentId(attachment) }));
+      else if (options.files?.length) body.attachments = [];
+      // An edit changes one flag, SuppressEmbeds; `0` takes it off.
+      if (options.flags !== undefined && options.flags !== null) body.flags = this.resolveFlags() & MessageFlags.SuppressEmbeds;
+      if ((options as { threadId?: string }).threadId) throw new BisimjsError(ErrorCodes.NotSupported, 'Threads');
     }
 
     if (this.kind === 'webhook') {
@@ -288,10 +320,48 @@ export class MessagePayload {
       if (options.avatarURL) warnOnce('avatarURL', 'Per message webhook avatars are not supported on Bisim: avatarURL is ignored.');
       if (options.threadId || options.threadName) throw new BisimjsError(ErrorCodes.NotSupported, 'Threads');
       if (options.components?.length) throw new BisimjsError(ErrorCodes.NotSupported, 'Components in webhook messages');
+      if (options.poll) throw new BisimjsError(ErrorCodes.NotSupported, 'Polls in webhook messages');
+      const flags = this.resolveFlags();
+      if (flags) body.flags = flags;
     }
 
     this.body = body;
     return this;
+  }
+
+  /**
+   * The client's `allowedMentions` option (or a webhook client's), the default for every message.
+   */
+  private defaultAllowedMentions(): MessageMentionOptions | undefined {
+    const target = this.target as { client?: { options?: { allowedMentions?: MessageMentionOptions } }; options?: { allowedMentions?: unknown } };
+    const fromClient = target.client?.options?.allowedMentions;
+    if (fromClient) return fromClient;
+    const own = target.options?.allowedMentions;
+    return own && typeof own === 'object' ? (own as MessageMentionOptions) : undefined;
+  }
+
+  /**
+   * The names an embed's `attachment://` may use: the new files' and the kept files'. `null` when an edit keeps
+   * files bisim.js does not know, so the server decides.
+   */
+  private attachmentNames(): ReadonlySet<string> | null {
+    const options = this.options as MessageEditOptions;
+    const names = new Set<string>();
+    for (const file of options.files ?? []) names.add(MessagePayload.fileName(file));
+    if (this.kind !== 'edit') return names;
+    const existing = this.existingAttachments;
+    if (options.attachments === undefined) {
+      if (existing === null) return null;
+      for (const attachment of existing) names.add(attachment.name);
+      return names;
+    }
+    for (const kept of options.attachments) {
+      const id = keptAttachmentId(kept);
+      const name = typeof kept === 'object' && kept.name ? kept.name : existing?.find((attachment) => attachment.id === id)?.name;
+      if (!name) return null;
+      names.add(name);
+    }
+    return names;
   }
 
   /**
@@ -303,12 +373,22 @@ export class MessagePayload {
       this.files = [];
       return this;
     }
-    if (this.kind !== 'message') {
-      const where = this.kind === 'edit' ? 'Adding files when editing a message' : this.kind === 'webhook' ? 'Files in webhook messages' : 'Files in interaction replies';
-      throw new BisimjsError(ErrorCodes.NotSupported, where);
-    }
     this.files = await Promise.all(files.map((file) => MessagePayload.resolveFile(file)));
     return this;
+  }
+
+  /**
+   * The name a file is sent under (what `attachment://name` refers to), without reading it.
+   *
+   * @param file - The file
+   */
+  public static fileName(file: AttachmentPayload): string {
+    if (file && typeof file === 'object' && 'data' in file && 'name' in file && !(file instanceof Readable)) return (file as RawFile).name;
+    if (file && typeof file === 'object' && 'attachment' in file && !(file instanceof Readable) && !Buffer.isBuffer(file)) {
+      const payload = file as { attachment: BufferResolvable | Readable; name?: string | null };
+      return payload.name ?? findName(payload.attachment) ?? 'file.jpg';
+    }
+    return findName(file) ?? 'file.jpg';
   }
 
   /**
@@ -337,6 +417,31 @@ export class MessagePayload {
     if (description) raw.description = description;
     return raw;
   }
+}
+
+/** The id of a file an edit keeps. */
+function keptAttachmentId(attachment: AttachmentKeepResolvable): string {
+  if (typeof attachment === 'string') return attachment;
+  if (attachment && typeof attachment.id === 'string') return attachment.id;
+  throw new BisimjsTypeError(ErrorCodes.InvalidType, 'attachments', 'list of attachments or their ids');
+}
+
+/**
+ * `allowedMentions` as Bisim takes it (the same fields, camelCase; Discord's `replied_user` is read too).
+ *
+ * @param allowed - The option
+ * @internal
+ */
+export function toBisimAllowedMentions(allowed: MessageMentionOptions): Record<string, unknown> {
+  const raw = allowed as MessageMentionOptions & { replied_user?: boolean };
+  const ids = (list: readonly (string | { id: string })[]) => [...new Set(list.map((entry) => (typeof entry === 'string' ? entry : entry.id)))];
+  const out: Record<string, unknown> = {};
+  if (raw.parse !== undefined && raw.parse !== null) out.parse = [...new Set(raw.parse)];
+  if (raw.users !== undefined && raw.users !== null) out.users = ids(raw.users);
+  if (raw.roles !== undefined && raw.roles !== null) out.roles = ids(raw.roles);
+  const repliedUser = raw.repliedUser ?? raw.replied_user;
+  if (typeof repliedUser === 'boolean') out.repliedUser = repliedUser;
+  return out;
 }
 
 function findName(attachment: unknown): string | undefined {

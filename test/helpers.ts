@@ -65,7 +65,13 @@ export class FakeGateway {
   public readonly tokens: string[] = [];
   public sockets: WebSocket[] = [];
   public refuseSubscribe = new Set<string>();
+  /** Servers whose next subscribe is refused, once. */
+  public refuseSubscribeOnce = new Set<string>();
   public heartbeatIntervalMs = 30_000;
+  /** Whether a subscribe is answered with a presence snapshot (only with the GuildPresences intent on Bisim). */
+  public presenceSnapshots = true;
+  /** Close every new connection at once with this code, before hello, as Bisim does for refused intents. */
+  public closeOnConnect: { code: number; reason: string } | null = null;
 
   public constructor() {
     this.server = new WebSocketServer({ port: 0, host: '127.0.0.1' });
@@ -73,6 +79,10 @@ export class FakeGateway {
       const token = new URL(request.url ?? '/', 'http://localhost').searchParams.get('token') ?? '';
       this.tokens.push(token);
       this.sockets.push(socket);
+      if (this.closeOnConnect) {
+        socket.close(this.closeOnConnect.code, this.closeOnConnect.reason);
+        return;
+      }
       socket.send(JSON.stringify({ op: 1, d: { heartbeatIntervalMs: this.heartbeatIntervalMs } }));
       socket.on('message', (raw) => {
         const frame = JSON.parse(raw.toString());
@@ -80,10 +90,11 @@ export class FakeGateway {
         if (frame.op === 2) socket.send(JSON.stringify({ op: 3 }));
         if (frame.op === 4) {
           const guildId = frame.d.guildId as string;
-          if (this.refuseSubscribe.has(guildId)) {
-            socket.send(JSON.stringify({ op: 10, d: { message: 'forbidden' } }));
+          if (this.refuseSubscribe.has(guildId) || this.refuseSubscribeOnce.delete(guildId)) {
+            socket.send(JSON.stringify({ op: 10, d: { message: 'forbidden', guildId } }));
             return;
           }
+          if (!this.presenceSnapshots) return;
           this.dispatch('PRESENCE_SYNC', { guildId, presenceSync: { presences: [{ userId: '200', guildId, status: 'online' }] } }, socket);
         }
       });
@@ -177,6 +188,7 @@ export function standardRest(): FakeRest {
     .on('GET /guilds', () => [{ id: GUILD_ID, name: 'Test Server', ownerId: '200', iconKey: null, systemChannelId: TEXT_ID, afkChannelId: null, afkTimeout: 300, createdAt: '2026-06-02T00:00:00.000Z' }])
     .on('GET /guilds/:id', () => guildDetail())
     .on('GET /guilds/:id/members', () => MEMBERS)
+    .on('GET /guilds/:id/members/:userId', (request) => MEMBERS.find((member) => request.path.endsWith(`/${member.userId}`)) ?? new Response(JSON.stringify({ code: 'UNKNOWN_MEMBER', message: 'Unknown member' }), { status: 404, headers: { 'content-type': 'application/json' } }))
     .on('GET /guilds/:id/emojis', () => [{ id: '1500', guildId: GUILD_ID, name: 'wave', objectKey: 'emojis/1500.png', creatorId: '200', createdAt: '2026-06-02T00:00:00.000Z' }])
     .on('GET /guilds/:id/voice-states', () => ({ states: [{ channelId: VOICE_ID, userId: '300', username: 'alice', displayName: 'alice', avatarKey: '', serverMuted: false, serverDeafened: false, selfMuted: true, selfDeafened: false, selfVideo: false, selfStream: false }] }))
     .on('GET /dms', () => []);
@@ -184,11 +196,16 @@ export function standardRest(): FakeRest {
 }
 
 /**
+ * Every intent, so a test client hears everything the fake gateway sends; tests about intents pass their own.
+ */
+export const ALL_INTENTS = Object.values(GatewayIntentBits).filter((bit): bit is number => typeof bit === 'number').reduce((all, bit) => all | bit, 0);
+
+/**
  * Makes a client wired to the fakes.
  */
 export function testClient(rest: FakeRest, gateway: FakeGateway, options: Partial<ClientOptions> = {}): Client {
   return new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
+    intents: ALL_INTENTS,
     rest: { api: 'http://bisim.test/api', cdn: 'http://cdn.bisim.test', makeRequest: rest.fetch, offset: 0, handlerSweepInterval: 0 },
     ws: { gateway: gateway.url },
     ...options,

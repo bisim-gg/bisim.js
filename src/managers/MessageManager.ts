@@ -175,17 +175,29 @@ export class MessageManager extends CachedManager<string, Message, MessageResolv
   }
 
   /**
-   * Edits a message the bot wrote.
+   * Edits a message the bot wrote: its text, embeds, components and files. `attachments` lists the files it keeps
+   * and `files` adds new ones, as on Discord.
    *
    * @param message - The message
    * @param options - The new content
+   * @example
+   * ```js
+   * await channel.messages.edit(message, { content: 'Updated', files: ['./chart.png'], attachments: [] });
+   * ```
    */
   public async edit(message: MessageResolvable, options: string | MessagePayload | MessageEditOptions): Promise<Message> {
     const id = typeof message === 'string' ? message : message.id;
     const payload = MessagePayload.create(this.channel, options as Record<string, unknown>, {}, 'edit');
+    const known = typeof message === 'string' ? this.cache.get(id) : message;
+    if (known && !known.partial) {
+      payload.existingAttachments = [...known.attachments.values()].map((attachment) => ({ id: attachment.id, name: attachment.name }));
+    }
     payload.resolveBody();
     await payload.resolveFiles();
-    const data = (await this.client.rest.patch(Routes.channelMessage(this.channel.id, id), { body: payload.body })) as RawMessageData;
+    const data = (await this.client.rest.patch(Routes.channelMessage(this.channel.id, id), {
+      body: payload.body,
+      files: payload.files?.length ? payload.files : undefined,
+    })) as RawMessageData;
     return this._add(data);
   }
 

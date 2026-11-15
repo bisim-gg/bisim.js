@@ -53,39 +53,62 @@ for (const file of fs.readdirSync(eventsDir).filter((name) => name.endsWith('.js
 | `MessageBulkDelete` | `messages`, `channel` |
 | `MessageReactionAdd`, `MessageReactionRemove` | `reaction`, `user`, `details` |
 | `MessageReactionRemoveAll` | `message`, `reactions` |
+| `MessageReactionRemoveEmoji` | `reaction` |
 | `MessagePollVoteAdd`, `MessagePollVoteRemove` | `answer`, `userId` |
 | `InteractionCreate` | `interaction` |
 | `GuildCreate`, `GuildDelete` | `guild` |
 | `GuildUpdate` | `oldGuild`, `newGuild` |
 | `GuildMemberAdd`, `GuildMemberRemove` | `member` |
 | `GuildMemberUpdate` | `oldMember`, `newMember` |
+| `GuildBanAdd`, `GuildBanRemove` | `ban` (partial: fetch it for the reason) |
+| `GuildAuditLogEntryCreate` | `entry`, `guild` |
+| `InviteCreate`, `InviteDelete` | `invite` |
+| `WebhooksUpdate` | `channel` |
+| `AutoModerationRuleCreate`, `AutoModerationRuleDelete` | `rule` |
+| `AutoModerationRuleUpdate` | `oldRule`, `newRule` |
+| `AutoModerationActionExecution` | `execution` |
 | `ChannelCreate`, `ChannelDelete` | `channel` |
 | `ChannelUpdate` | `oldChannel`, `newChannel` |
 | `ChannelPinsUpdate` | `channel`, `date` |
 | `GuildRoleCreate`, `GuildRoleDelete` | `role` |
 | `GuildRoleUpdate` | `oldRole`, `newRole` |
 | `GuildEmojiCreate`, `GuildEmojiDelete` | `emoji` |
+| `GuildEmojiUpdate` | `oldEmoji`, `newEmoji` |
 | `GuildStickerCreate`, `GuildStickerDelete` | `sticker` |
+| `GuildStickerUpdate` | `oldSticker`, `newSticker` |
 | `PresenceUpdate` | `oldPresence`, `newPresence` |
 | `TypingStart` | `typing` |
 | `VoiceStateUpdate` | `oldState`, `newState` |
+| `GuildSoundboardSoundCreate`, `GuildSoundboardSoundDelete` | `sound` |
+| `GuildSoundboardSoundUpdate` | `oldSound`, `newSound` |
+| `VoiceChannelEffectSend` | `effect` (a soundboard sound played in a voice channel) |
 | `VoiceServerUpdate` | `data` (the bot's voice join, from @bisim/voice) |
 | `UserUpdate` | `oldUser`, `newUser` |
 | `ShardReady`, `ShardResume`, `ShardReconnecting`, `ShardDisconnect`, `ShardError` | the connection's life |
 | `Debug`, `Warn`, `Error`, `Raw` | diagnostics |
 
-`ClientReady` is also emitted under its older name, `ready`, so both spellings work.
+`ClientReady` is also emitted under its older name, `ready`, so both spellings work, and `WebhooksUpdate`
+under the deprecated `webhookUpdate`.
+
+Which of these the bot receives depends on its intents, as on Discord: see
+[The gateway and intents](./gateway.md#intents).
 
 ## What is different on Bisim
 
 - **`ClientReady` is built by bisim.js.** Bisim has no READY event; bisim.js loads every server, then emits
   `ClientReady` once. After a reconnect it emits `ShardResume` instead.
-- **Channels are created and deleted** through server refreshes: bisim.js compares the server before and
-  after and emits `ChannelCreate`, `ChannelUpdate` and `ChannelDelete`.
-- **Never emitted**, because Bisim has no source for them: `GuildBanAdd`, `GuildBanRemove`, `InviteCreate`,
-  `InviteDelete`, `GuildMembersChunk`, and every thread, stage, scheduled event and entitlement event.
-- **Uncached messages.** An edit, delete or reaction on a message the bot has not cached is emitted only
-  when you enable the matching partial, as in discord.js: `new Client({ partials: [Partials.Message] })`.
+- **Server refreshes.** When Bisim asks bisim.js to load a server again (the bot's permissions changed),
+  bisim.js compares the server before and after and emits what changed, `ChannelUpdate` and the role events
+  among them. A channel made or deleted is emitted once, whether its event or the refresh comes first.
+- **Audit log entries** have Discord's numbers: `entry.action === AuditLogEvent.MemberBanAdd` works, and
+  Bisim's own name for the action is `entry.actionName`.
+- **Never emitted**, because Bisim has no source for them: `GuildMembersChunk`, `GuildIntegrationsUpdate`,
+  `GuildAvailable`, `GuildUnavailable`, `ApplicationCommandPermissionsUpdate`, `CacheSweep`, and every
+  thread, stage, scheduled event and entitlement event.
+- **Uncached messages and members.** An edit, delete or reaction on a message the bot has not cached, or a
+  member it has not cached leaving, is emitted only when you enable the matching partial, as in discord.js:
+  `new Client({ partials: [Partials.Message, Partials.GuildMember] })`. A member who leaves comes with their
+  user, so even a partial member has `member.user`.
 
 ## Errors
 

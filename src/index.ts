@@ -53,7 +53,7 @@ export {
 export * from './rest/types.js';
 export * from './rest/errors.js';
 export { Routes, OAuth2Routes } from './rest/Routes.js';
-export { REST, DefaultRestOptions, parseResponse, type UploadedAttachment } from './rest/REST.js';
+export { REST, DefaultRestOptions, parseResponse, type UploadedAttachment, type RateLimitBucket } from './rest/REST.js';
 
 // Builders
 export * from './builders/SlashCommandBuilder.js';
@@ -70,6 +70,8 @@ export * from './managers/ChannelManager.js';
 export * from './managers/GuildBanManager.js';
 export * from './managers/GuildChannelManager.js';
 export * from './managers/GuildExpressionManagers.js';
+export * from './managers/GuildSoundboardSoundManager.js';
+export * from './managers/AutoModerationRuleManager.js';
 export * from './managers/GuildInviteManager.js';
 export * from './managers/GuildManager.js';
 export * from './managers/GuildMemberManager.js';
@@ -87,6 +89,14 @@ export * from './client/voice/ClientVoiceManager.js';
 export { Base } from './structures/Base.js';
 export * from './structures/ApplicationCommand.js';
 export * from './structures/Attachment.js';
+export { AutoModerationActionExecution, AutoModerationRule } from './structures/AutoModeration.js';
+export type {
+  AutoModerationAction,
+  AutoModerationActionMetadata,
+  AutoModerationTriggerMetadata,
+  RawAutoModerationActionExecutionData,
+  RawAutoModerationRuleData,
+} from './structures/AutoModeration.js';
 export * from './structures/ClientApplication.js';
 export * from './structures/ClientUser.js';
 export * from './structures/Collectors.js';
@@ -115,6 +125,7 @@ export type {
   PresenceUpdateData,
 } from './structures/Presence.js';
 export * from './structures/Role.js';
+export * from './structures/SoundboardSound.js';
 export * from './structures/Typing.js';
 export * from './structures/User.js';
 export * from './structures/VoiceState.js';
@@ -138,6 +149,7 @@ export * from './interactions/ModalSubmitInteraction.js';
 export * from './interactions/InteractionResponse.js';
 export type { InteractionDeferReplyOptions, InteractionDeferUpdateOptions } from './interactions/InteractionResponses.js';
 export { verifyKey, verifyKeySync } from './interactions/verifyKey.js';
+export type { ImageResolvable } from './util/images.js';
 
 // Raw Bisim data
 export type * from './types/raw.js';

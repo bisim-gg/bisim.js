@@ -195,6 +195,8 @@ export interface RawComponentData {
     default?: boolean;
   }[];
   channelTypes?: (string | number)[];
+  /** What a user, role, mentionable or channel select shows as picked. */
+  defaultValues?: { id: string; type: 'user' | 'role' | 'channel' | string }[];
   components?: RawComponentData[];
 }
 
@@ -230,6 +232,16 @@ export interface RawMessageData {
   components?: RawComponentData[];
   loading?: boolean;
   flags?: number;
+  /** The people the text mentions (events). */
+  mentions?: RawUserData[];
+  /** The ids of the people the text mentions (REST). */
+  mentionIds?: string[];
+  /** The roles the text mentions. */
+  mentionRoleIds?: string[];
+  /** Whether the text mentions everyone (`@everyone` or `@here`). */
+  mentionEveryone?: boolean;
+  /** The author's membership in the server (events; absent in a DM and for a webhook). */
+  member?: RawMemberData | null;
 }
 
 /** A custom emoji. */

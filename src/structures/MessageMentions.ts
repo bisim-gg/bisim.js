@@ -21,8 +21,21 @@ export interface MessageMentionsHasOptions {
 }
 
 /**
- * Who and what a message mentions. On Bisim mentions live in the content as tokens (`<@id>`, `<@&id>`,
- * `<#id>`, `@everyone`), so they are read from there.
+ * The mention lists Bisim sends with a message: the people (whole on events, ids on REST), the roles, and
+ * whether everyone is mentioned.
+ */
+export interface MessageMentionLists {
+  users?: RawUserData[];
+  userIds?: string[];
+  roleIds?: string[];
+  everyone?: boolean;
+}
+
+/**
+ * Who and what a message mentions. Bisim sends the people, roles and `@everyone` with each message, worked
+ * out from the text when it was written, so they are right even when the bot cannot read the text (no
+ * Message Content intent). Without those lists (an older server, or a message the bot just sent) they are
+ * read from the tokens in the text (`<@id>`, `<@&id>`, `@everyone`). Channels always come from the text.
  */
 export class MessageMentions {
   /** Matches `@everyone` and `@here`. */
@@ -63,19 +76,29 @@ export class MessageMentions {
   /**
    * @param message - The message
    * @param repliedUser - The author of the message it replies to
+   * @param lists - The mention lists Bisim sent, or `null` to read the mentions from the text
    */
-  public constructor(message: Message, repliedUser?: RawUserData | null) {
+  public constructor(message: Message, repliedUser?: RawUserData | null, lists?: MessageMentionLists | null) {
     attachHidden(this, 'client', message.client);
     attachHidden(this, 'guild', message.guild);
     attachHidden(this, 'message', message);
     this.content = message.content ?? '';
-    this.everyone = MessageMentions.EveryonePattern.test(this.content);
     const { users } = this.client;
-    const userIds = new Set(idsIn(this.content, MessageMentions.GlobalUsersPattern));
-    this.users = new Collection([...userIds].map((id) => [id, users.cache.get(id) ?? users._add({ id } as RawUserData, false)]));
+    const known = (id: string) => users.cache.get(id) ?? users._add({ id } as RawUserData, false);
+    let mentioned: User[];
+    let roleIds: string[];
+    if (lists) {
+      this.everyone = Boolean(lists.everyone);
+      mentioned = lists.users ? lists.users.map((user) => users._add(user)) : (lists.userIds ?? []).map(known);
+      roleIds = lists.roleIds ?? [];
+    } else {
+      this.everyone = MessageMentions.EveryonePattern.test(this.content);
+      mentioned = [...new Set(idsIn(this.content, MessageMentions.GlobalUsersPattern))].map(known);
+      roleIds = idsIn(this.content, MessageMentions.GlobalRolesPattern);
+    }
+    this.users = new Collection(mentioned.map((user) => [user.id, user]));
     const roles = this.guild?.roles.cache;
-    const roleIds = roles ? idsIn(this.content, MessageMentions.GlobalRolesPattern).filter((id) => roles.has(id)) : [];
-    this.roles = new Collection(roleIds.map((id) => [id, roles!.get(id)!]));
+    this.roles = new Collection(roles ? [...new Set(roleIds)].filter((id) => roles.has(id)).map((id) => [id, roles.get(id)!]) : []);
     this.repliedUser = repliedUser ? users._add(repliedUser) : null;
   }
 
@@ -102,10 +125,12 @@ export class MessageMentions {
   }
 
   /**
-   * The users mentioned in the content, the same as {@link MessageMentions.users} on Bisim.
+   * The users whose tokens are in the text the bot can read (empty when it cannot read the text).
    */
   public get parsedUsers(): Collection<string, User> {
-    return this.users;
+    const ids = new Set(idsIn(this.content, MessageMentions.GlobalUsersPattern));
+    const { users } = this.client;
+    return new Collection([...ids].map((id) => [id, this.users.get(id) ?? users.cache.get(id) ?? users._add({ id } as RawUserData, false)]));
   }
 
   /**

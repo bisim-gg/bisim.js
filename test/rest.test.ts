@@ -224,7 +224,7 @@ describe('REST', () => {
   it('refuses files where Bisim takes none', async () => {
     const { rest } = fakeRest(() => json(200, {}));
     await expect(
-      rest.patch(Routes.channelMessage('1', '2'), { body: { content: 'x' }, files: [{ name: 'a.txt', data: 'a' }] }),
+      rest.post(Routes.guildRoles('1'), { body: { name: 'x' }, files: [{ name: 'a.txt', data: 'a' }] }),
     ).rejects.toThrow(/not supported on Bisim/);
   });
 

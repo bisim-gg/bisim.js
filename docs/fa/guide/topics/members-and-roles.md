@@ -2,8 +2,9 @@
 
 ## اعضا
 
-bisim.js هنگام اتصال، اعضای همهٔ سرورها را بارگذاری می‌کند، پس `guild.members.cache` از لحظهٔ `ClientReady`
-پر است. می‌توانید اعضا را جداگانه هم بگیرید:
+با اینتنت `GuildMembers`، bisim.js هنگام اتصال اعضای همهٔ سرورها را بارگذاری می‌کند، پس `guild.members.cache`
+از لحظهٔ `ClientReady` پر است و رویدادهای اعضا آن را به‌روز نگه می‌دارند. بدون آن، حافظهٔ موقت خود ربات و اعضایی
+را نگه می‌دارد که ربات با آن‌ها روبه‌رو شده است، مثل نویسندگان پیام‌ها. می‌توانید اعضا را جداگانه هم بگیرید:
 
 ```js
 const member = await guild.members.fetch('123456789012345678');
@@ -11,6 +12,9 @@ const everyone = await guild.members.fetch();
 const found = await guild.members.search({ query: 'ali', limit: 10 });
 const me = guild.members.me; // the bot itself
 ```
+
+گرفتن همهٔ اعضا به این نیاز دارد که اینتنت Server Members برای برنامه در پرتال توسعه‌دهندگان روشن باشد؛ وگرنه
+`guild.members.fetch()` با `MissingIntent` رد می‌شود. گرفتن یک عضو و جست‌وجو بدون آن هم کار می‌کنند.
 
 هر `GuildMember` این‌ها را دارد: `user`، `nickname`، `displayName`، `joinedAt`، `roles`، `permissions`، `voice` و
 `presence`.
@@ -29,6 +33,47 @@ await guild.members.unban('123456789012345678');
 بی‌سیم مثل دیسکورد سلسله‌مراتب نقش‌ها را رعایت می‌کند: ربات فقط روی اعضایی که پایین‌تر از بالاترین نقش آن‌اند
 می‌تواند کاری انجام دهد و دسترسی مربوط را هم لازم دارد. پیش از هر کار با `member.kickable`، `bannable`،
 `moderatable` و `manageable` بررسی کنید.
+
+برای بن کردن چند نفر با هم (تا ۲۰۰ نفر، با دسترسی‌های Ban Members و Manage Server):
+
+```js
+const { bannedUsers, failedUsers } = await guild.bans.bulkCreate(ids, { deleteMessageSeconds: 3600, reason: 'Raid' });
+```
+
+`failedUsers` کسانی را نشان می‌دهد که بی‌سیم بن نکرد، مثل مالک سرور یا کسی که بالاتر از ربات است. اگر هیچ‌کس بن
+نشود، بی‌سیم خطای `BULK_BAN_FAILED` می‌دهد.
+
+هر `reason` به گزارش ممیزی سرور می‌رسد: bisim.js آن را در سرآیند `X-Audit-Log-Reason` دیسکورد می‌فرستد که بی‌سیم
+در همهٔ مسیرها می‌خواند.
+
+## اتومد
+
+ربات با دسترسی Manage Server قانون‌های اتومد سرور را، با واژه‌های discord.js، می‌خواند و می‌نویسد:
+
+```js
+const { AutoModerationActionType, AutoModerationRuleEventType, AutoModerationRuleTriggerType } = require('bisim.js');
+
+const rule = await guild.autoModerationRules.create({
+  name: 'No invite links',
+  eventType: AutoModerationRuleEventType.MessageSend,
+  triggerType: AutoModerationRuleTriggerType.Keyword,
+  triggerMetadata: { keywordFilter: ['*discord.gg*', '*bisim.gg/*'] },
+  actions: [
+    { type: AutoModerationActionType.BlockMessage, metadata: { customMessage: 'No invites here.' } },
+    { type: AutoModerationActionType.SendAlertMessage, metadata: { channel: modLog } },
+  ],
+  exemptRoles: [moderators],
+});
+
+await rule.setEnabled(false);
+const rules = await guild.autoModerationRules.fetch();
+await rule.delete();
+```
+
+ماشه‌ها `Keyword`، `KeywordPreset` (فهرست واژه‌های بی‌سیم: `Profanity`، `SexualContent` و `Slurs`)، `Spam`،
+`MentionSpam` و `MemberProfile` (نام و نام مستعار اعضا، با نوع رویداد `MemberUpdate`) هستند. کارها
+`BlockMessage`، `SendAlertMessage` و `Timeout` هستند. هر قانون پس از ساخته شدن ماشه و نوع رویدادش را نگه
+می‌دارد؛ محافظت از هجوم اشاره و `BlockMemberInteraction` در بی‌سیم نیستند و خطا می‌دهند.
 
 ## نقش‌ها
 

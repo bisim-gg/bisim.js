@@ -145,3 +145,17 @@ While the bot is in a voice channel it can play one of the server's soundboard s
 ```js
 await voiceChannel.sendSoundboardSound({ soundId: '123456789012345678' });
 ```
+
+The server's sounds are in `guild.soundboardSounds` (fill it with `fetch()`), and the events
+`GuildSoundboardSoundCreate`, `GuildSoundboardSoundUpdate` and `GuildSoundboardSoundDelete` keep it current.
+When anyone plays a sound, `VoiceChannelEffectSend` brings a `VoiceChannelEffect` with `soundId`,
+`soundVolume`, `userId` and `channel`.
+
+## The channel's status
+
+While in the call, a bot with Set Voice Channel Status can set the line shown under the channel's name:
+
+```js
+await voiceChannel.setStatus('Now playing: lo-fi beats');
+await voiceChannel.setStatus(''); // clears it
+```

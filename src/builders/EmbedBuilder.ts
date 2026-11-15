@@ -16,7 +16,7 @@ export interface APIEmbedField {
 export interface APIEmbedAuthor {
   name: string;
   url?: string;
-  /** The round icon before the name (an http or https link). */
+  /** The round icon before the name (an http or https link, or `attachment://name`). */
   icon_url?: string;
   proxy_icon_url?: string;
 }
@@ -26,7 +26,7 @@ export interface APIEmbedAuthor {
  */
 export interface APIEmbedFooter {
   text: string;
-  /** The round icon before the text (an http or https link). */
+  /** The round icon before the text (an http or https link, or `attachment://name`). */
   icon_url?: string;
   proxy_icon_url?: string;
 }
@@ -44,8 +44,8 @@ export interface APIEmbedImage {
 
 /**
  * An embed, in the shape discord.js builds. Bisim shows the title, description, URL, color, timestamp,
- * author (name, URL and icon), footer (text and icon), fields, image and thumbnail. A picture must be an http or
- * https link: Discord's `attachment://` is kept on the builder but not sent.
+ * author (name, URL and icon), footer (text and icon), fields, image and thumbnail. A picture is an http or https
+ * link, or `attachment://name` for a file sent (or kept) with the same message.
  */
 export interface APIEmbed {
   title?: string;
@@ -69,7 +69,7 @@ export interface APIEmbed {
 export interface EmbedAuthorOptions {
   name: string;
   url?: string;
-  /** The round icon before the name (an http or https link). */
+  /** The round icon before the name (an http or https link, or `attachment://name`). */
   iconURL?: string;
 }
 
@@ -78,7 +78,7 @@ export interface EmbedAuthorOptions {
  */
 export interface EmbedFooterOptions {
   text: string;
-  /** The round icon before the text (an http or https link). */
+  /** The round icon before the text (an http or https link, or `attachment://name`). */
   iconURL?: string;
 }
 
@@ -238,7 +238,7 @@ export class EmbedBuilder {
   /**
    * Sets the large image, shown below the fields.
    *
-   * @param url - The image URL (http or https), or `null` to remove it
+   * @param url - The image URL (http or https, or `attachment://name`), or `null` to remove it
    */
   public setImage(url: string | null): this {
     if (url === null) delete this.data.image;
@@ -249,7 +249,7 @@ export class EmbedBuilder {
   /**
    * Sets the thumbnail, the small picture beside the text.
    *
-   * @param url - The thumbnail URL (http or https), or `null` to remove it
+   * @param url - The thumbnail URL (http or https, or `attachment://name`), or `null` to remove it
    */
   public setThumbnail(url: string | null): this {
     if (url === null) delete this.data.thumbnail;
@@ -312,13 +312,37 @@ export class EmbedBuilder {
   }
 }
 
+const ATTACHMENT_SCHEME = 'attachment://';
+
 /**
- * A picture's address as Bisim takes it: an http or https link of at most 2048 characters. Anything else (Discord's
- * `attachment://` above all) is left out with a warning, since Bisim would refuse the whole message for it.
+ * What {@link toBisimEmbed} knows about the message an embed goes in.
+ *
+ * @internal
  */
-function pictureURL(url: unknown): string | undefined {
+export interface ToBisimEmbedOptions {
+  /**
+   * The names of the files the message carries or keeps, which `attachment://name` may show; `null` when an edit
+   * keeps files bisim.js does not know (the server then checks the name). Empty by default.
+   */
+  attachmentNames?: ReadonlySet<string> | null;
+}
+
+/**
+ * A picture's address as Bisim takes it: an http or https link of at most 2048 characters, or `attachment://name`
+ * for a file of the same message. Anything else, and an `attachment://` naming no file of the message, is left out
+ * with a warning, since Bisim would refuse the whole message for it.
+ */
+function pictureURL(url: unknown, attachmentNames: ReadonlySet<string> | null): string | undefined {
   if (typeof url !== 'string' || !url) return undefined;
   if (/^https?:\/\/[^/?#\s]/i.test(url) && url.length <= PICTURE_URL_MAX) return url;
+  if (url.startsWith(ATTACHMENT_SCHEME)) {
+    const name = url.slice(ATTACHMENT_SCHEME.length);
+    // eslint-disable-next-line no-control-regex
+    const valid = name.length > 0 && name.length <= 256 && !/[\u0000-\u001f]/.test(name);
+    if (valid && (attachmentNames === null || attachmentNames.has(name))) return url;
+    warnEmbedPart('attachment:// pictures that name no file of the message are');
+    return undefined;
+  }
   warnEmbedPart('pictures that are not http or https links are');
   return undefined;
 }
@@ -328,9 +352,11 @@ function pictureURL(url: unknown): string | undefined {
  * Parts Bisim does not show are left out.
  *
  * @param input - The embed
+ * @param options - The files of the message, for `attachment://` pictures
  * @internal
  */
-export function toBisimEmbed(input: unknown): Record<string, unknown> {
+export function toBisimEmbed(input: unknown, options: ToBisimEmbedOptions = {}): Record<string, unknown> {
+  const names = options.attachmentNames === undefined ? new Set<string>() : options.attachmentNames;
   const data = (
     input && typeof (input as { toJSON?: unknown }).toJSON === 'function' ? (input as { toJSON(): APIEmbed }).toJSON() : input
   ) as APIEmbed & Record<string, unknown>;
@@ -345,23 +371,23 @@ export function toBisimEmbed(input: unknown): Record<string, unknown> {
     const author: Record<string, string> = { name: authorName };
     const authorUrl = data.author?.url ?? (data.authorUrl as string | undefined);
     if (authorUrl) author.url = authorUrl;
-    const iconUrl = pictureURL(data.author?.icon_url ?? data.authorIconUrl);
+    const iconUrl = pictureURL(data.author?.icon_url ?? data.authorIconUrl, names);
     if (iconUrl) author.iconUrl = iconUrl;
     out.author = author;
   }
   const footerText = data.footer?.text ?? (data.footerText as string | undefined);
   if (footerText) {
     const footer: Record<string, string> = { text: footerText };
-    const iconUrl = pictureURL(data.footer?.icon_url ?? data.footerIconUrl);
+    const iconUrl = pictureURL(data.footer?.icon_url ?? data.footerIconUrl, names);
     if (iconUrl) footer.iconUrl = iconUrl;
     out.footer = footer;
   }
   if (data.fields?.length) {
     out.fields = data.fields.map((field) => ({ name: field.name, value: field.value, inline: Boolean(field.inline) }));
   }
-  const image = pictureURL(data.image?.url ?? data.imageUrl);
+  const image = pictureURL(data.image?.url ?? data.imageUrl, names);
   if (image) out.image = { url: image };
-  const thumbnail = pictureURL(data.thumbnail?.url ?? data.thumbnailUrl);
+  const thumbnail = pictureURL(data.thumbnail?.url ?? data.thumbnailUrl, names);
   if (thumbnail) out.thumbnail = { url: thumbnail };
   return out;
 }

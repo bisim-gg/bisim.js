@@ -5,7 +5,7 @@ import { Routes } from '../../rest/Routes.js';
 import type { RawMessageData, RawWebhookData } from '../../types/raw.js';
 import { Collection } from '../../util/Collection.js';
 import { SnowflakeUtil } from '../../util/SnowflakeUtil.js';
-import { notSupported } from '../../util/Util.js';
+import type { ImageResolvable } from '../../util/images.js';
 import {
   type AwaitMessageComponentOptions,
   type AwaitMessagesOptions,
@@ -29,8 +29,8 @@ import { onComponents } from '../collectorScope.js';
 export interface ChannelWebhookCreateOptions {
   /** The name (1 to 80 characters). */
   name: string;
-  /** Not on Bisim through the API: webhook avatars. */
-  avatar?: unknown;
+  /** The picture: a Buffer, a path, a URL or a `data:` URI. */
+  avatar?: ImageResolvable | null;
   /** Why (for the audit log). */
   reason?: string;
 }
@@ -179,9 +179,10 @@ export class TextBasedChannelMethods {
   }
 
   public async createWebhook(this: TextBasedHost, options: ChannelWebhookCreateOptions): Promise<Webhook> {
-    if (options.avatar !== undefined && options.avatar !== null) notSupported('Webhook avatars through the API');
     const data = (await this.client.rest.post(Routes.channelWebhooks(this.id), { body: { name: options.name }, reason: options.reason })) as RawWebhookData;
-    return new Webhook(this.client, data);
+    const webhook = new Webhook(this.client, data);
+    if (options.avatar !== undefined && options.avatar !== null) await webhook.edit({ avatar: options.avatar, reason: options.reason });
+    return webhook;
   }
 }
 

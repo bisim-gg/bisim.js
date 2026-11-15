@@ -84,6 +84,11 @@ await interaction.reply('Working on it...');
 await interaction.followUp('One more thing.');
 ```
 
+پس از `deferReply()`، نخستین `followUp()`، مثل دیسکورد، جای پیام «در حال فکر کردن» را می‌گیرد و همان حالت
+دیده شدنش را نگه می‌دارد؛ followUpهای بعدی پیام تازه‌اند. پاسخ‌ها و followUpها، مثل `channel.send()`، فایل، امبد و
+کامپوننت می‌پذیرند، و نظرسنجی را در یک پیام تازه: `reply({ poll })` یا `followUp({ poll })`، که هرگز ephemeral
+نیست، تنها فرستاده می‌شود و نمی‌تواند همان followUp باشد که جای پیام «در حال فکر کردن» را می‌گیرد.
+
 ### گرفتن و حذف پاسخ
 
 ```js

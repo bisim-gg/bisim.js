@@ -6,13 +6,86 @@ All notable changes to bisim.js are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Gateway intents work as on Discord: the client sends `intents` when it connects and Bisim delivers only the
+  events they cover. A privileged intent (`GuildMembers`, `GuildPresences`, `MessageContent`) has to be switched
+  on in the Developer Portal (bisim.gg/developers, your app, Bot, Privileged Gateway Intents). When Bisim refuses
+  the intents, `login()` rejects with `InvalidIntents` (close code 4013) or `DisallowedIntents` (4014), and the
+  client never reconnects after either; on a later reconnect it emits `shardDisconnect` with the code and the
+  error instead.
+- New events: `guildBanAdd`, `guildBanRemove`, `inviteCreate`, `inviteDelete`, `guildAuditLogEntryCreate`,
+  `webhooksUpdate` (and the deprecated `webhookUpdate`), `autoModerationRuleCreate`, `autoModerationRuleUpdate`,
+  `autoModerationRuleDelete`, `autoModerationActionExecution`, `emojiUpdate`, `stickerUpdate` and
+  `messageReactionRemoveEmoji`, with `AutoModerationRule` and `AutoModerationActionExecution` and the AutoMod and
+  `AuditLogEvent` enums.
+- `channelCreate` and `channelDelete` come from Bisim's own events, once each, even though a server refresh follows
+  them.
+- `message.member` comes with the message, and `message.mentions` (users, roles, `@everyone`) from the lists Bisim
+  sends, so both work without the member list and without the Message Content intent. The text is still read for
+  mentions when a server sends no lists.
+- `guildMemberRemove` for a member that was not cached (with `Partials.GuildMember`) has the user who left.
+- The `MissingIntent` error: `guild.members.fetch()` for every member rejects with it when the app does not have
+  the Server Members intent switched on, instead of with a bare 403.
+- Files everywhere a message is sent or edited: `interaction.reply()`, `followUp()`, `editReply()` and `update()`,
+  `webhook.send()` and `webhook.editMessage()` (and `WebhookClient`'s), and `message.edit()`. bisim.js uploads them
+  with the interaction's or the webhook's token. In an edit, `attachments` is the list of files kept and `files`
+  adds new ones, as on Discord; `message.removeAttachments()` drops them all.
+- `attachment://name` in an embed's image, thumbnail, author icon and footer icon shows a file sent or kept with
+  the same message. One that names no file of the message is still left out, with a warning once.
+- A poll in an interaction answer: `reply({ poll })` and `followUp({ poll })`.
+- `allowedMentions` (and the client's `allowedMentions` option as the default) is sent with every message,
+  interaction answer, webhook message and edit, and Bisim honours it as Discord does.
+- Message flags: `SuppressEmbeds` and `SuppressNotifications` on `channel.send()`, interaction answers and
+  webhooks, `message.suppressEmbeds()`, and `flags` on edits (which change `SuppressEmbeds` only). `message.flags`
+  is read from events too.
+- Select menu default values: `setDefaultUsers()`, `addDefaultUsers()`, `setDefaultRoles()`, `addDefaultRoles()`,
+  `setDefaultChannels()`, `addDefaultChannels()`, and `addDefaultValues()` / `setDefaultValues()` on
+  `MentionableSelectMenuBuilder`; `component.defaultValues` reads them back.
+- `reaction.remove()` removes every reaction of one emoji (`Routes.channelMessageReactionAll`).
+- `guild.bans.bulkCreate(users, { deleteMessageSeconds, reason })`, resolving with `{ bannedUsers, failedUsers }`,
+  and `Routes.guildBulkBan`.
+- Renaming emoji and stickers: `emoji.edit({ name })`, `emoji.setName()`, `guild.emojis.edit()`,
+  `sticker.edit({ name })` and `guild.stickers.edit()`. Emoji roles and sticker descriptions and tags still throw.
+- A webhook's own messages: `fetchMessage()`, `editMessage()` and `deleteMessage()` on `Webhook` and
+  `WebhookClient`, with the token alone.
+- Pictures: `webhook.edit({ avatar })` and `channel.createWebhook({ name, avatar })` (`null` removes it), and the
+  bot's own `client.user.setAvatar()`, `setBanner()` and `edit({ avatar, banner })`. A picture is a Buffer, a
+  path, a URL or a `data:` URI.
+- `voiceChannel.setStatus()` sets a voice channel's status line while the bot is in the call.
+- `guild.soundboardSounds` (`GuildSoundboardSoundManager`: `fetch`, `create`, `edit`, `delete`) with
+  `SoundboardSound`, and the events `guildSoundboardSoundCreate`, `guildSoundboardSoundUpdate`,
+  `guildSoundboardSoundDelete` and `voiceChannelEffectSend` (a `VoiceChannelEffect` when a sound is played).
+- `guild.autoModerationRules` (`AutoModerationRuleManager`: `fetch`, `create`, `edit`, `delete`) and the methods of
+  `AutoModerationRule` (`edit`, `delete`, `setName`, `setKeywordFilter`, `setEnabled`, `setActions` and the rest),
+  with Discord's trigger, preset and action numbers.
+- `REST.uploadFilesTo()`, and the routes `interactionAttachments`, `webhookAttachments`, `webhookAvatar`,
+  `currentUserAvatar`, `currentUserBanner`, `channelVoiceStatus`, `guildAutoModerationRules` and
+  `guildAutoModerationRule`.
+
 ### Changed
 
+- Without the `GuildMembers` intent the client no longer loads every server's member list when it connects, only
+  the bot's own member; other members are cached as they appear (message authors, for example). Add
+  `GuildMembers` to the intents, and switch it on, to keep the whole list.
+- Without the `GuildPresences` intent no presences arrive, so a subscription to a server is no longer confirmed by
+  its presence snapshot: it counts at once, and is tried again if the gateway refuses it.
+- Without the `MessageContent` intent a message from another member arrives with empty `content` and without
+  embeds, attachments, components and polls (as on Discord), except messages that mention the bot and DMs. A bot
+  that reads message text needs the intent in its options and switched on.
+- `GuildAuditLogsEntry.action` is Discord's `AuditLogEvent` number (it was Bisim's name, now in the new
+  `actionName`), `actionType` is `Create`, `Update` or `Delete`, `targetType` uses discord.js's names (`User`,
+  `Channel`...), `target` resolves cached channels, roles and the server, and `changes` lists what an update
+  changed. `fetchAuditLogs({ type })` takes either the number or Bisim's name.
+- A `GuildBan` from an event is partial (no `reason`): `fetch()` it for the rest.
+- Rate limits follow Bisim's `X-RateLimit-Bucket` and reset headers: the routes Bisim names as one bucket share its
+  count, and a request waits for the reset when its bucket has nothing left, instead of running into a 429.
+  `rateLimited` reports the bucket as `hash` and Bisim's `X-RateLimit-Scope` as `scope`.
 - Embeds show their pictures: `setImage()`, `setThumbnail()` and the `iconURL` of `setAuthor()` and `setFooter()`
   are sent instead of being kept on the builder, and an embed Bisim sends back has its `thumbnail` and its author
-  and footer `iconURL` filled in. A picture must be an `http` or `https` link; Discord's `attachment://` is left out
-  with a warning once, since Bisim would refuse the whole message for it. Needs the Bisim server of 2026-11-15 or
-  later; an older one ignores the pictures.
+  and footer `iconURL` filled in. A picture is an `http` or `https` link, or `attachment://name` for a file of
+  the same message (see Added); anything else is left out with a warning once, since Bisim would refuse the whole
+  message for it. Needs the Bisim server of 2026-11-15 or later; an older one ignores the pictures.
 
 ## [0.2.0] - 2026-11-14
 

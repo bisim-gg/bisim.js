@@ -4,7 +4,8 @@ import type { RawEmojiData, RawStickerData } from '../types/raw.js';
 import { Collection } from '../util/Collection.js';
 import { PermissionFlagsBits } from '../util/PermissionsBitField.js';
 import { SnowflakeUtil } from '../util/SnowflakeUtil.js';
-import { cdnURL, notSupported, parseEmoji } from '../util/Util.js';
+import { cdnURL, parseEmoji } from '../util/Util.js';
+import type { GuildEmojiEditOptions, GuildStickerEditOptions } from '../managers/GuildExpressionManagers.js';
 import { Base } from './Base.js';
 import type { Guild } from './Guild.js';
 import type { MessageReaction } from './MessageReaction.js';
@@ -180,14 +181,27 @@ export class GuildEmoji extends Emoji {
     return this.author;
   }
 
-  /** Not on Bisim: emoji cannot be renamed. */
-  public edit(_data: unknown): Promise<GuildEmoji> {
-    return notSupported('Editing an emoji');
+  /**
+   * Renames the emoji. `roles` is not on Bisim and throws.
+   *
+   * @param data - The new name, and why
+   * @example
+   * ```js
+   * await emoji.edit({ name: 'party_blob' });
+   * ```
+   */
+  public edit(data: GuildEmojiEditOptions): Promise<GuildEmoji> {
+    return this.guild.emojis.edit(this, data);
   }
 
-  /** Not on Bisim: emoji cannot be renamed. */
-  public setName(_name: string, _reason?: string): Promise<GuildEmoji> {
-    return notSupported('Renaming an emoji');
+  /**
+   * Renames the emoji.
+   *
+   * @param name - The new name (2 to 32 letters, digits or `_`)
+   * @param reason - Why
+   */
+  public setName(name: string, reason?: string): Promise<GuildEmoji> {
+    return this.edit({ name, reason });
   }
 
   /**
@@ -300,9 +314,15 @@ export class Sticker extends Base {
     return this;
   }
 
-  /** Not on Bisim: stickers cannot be renamed. */
-  public edit(_data: unknown): Promise<Sticker> {
-    return notSupported('Editing a sticker');
+  /**
+   * Renames the sticker. `description` and `tags` are not on Bisim and throw.
+   *
+   * @param data - The new name, and why
+   */
+  public edit(data: GuildStickerEditOptions): Promise<Sticker> {
+    const guild = this.guild;
+    if (!guild) throw new TypeError('This sticker does not belong to a cached server.');
+    return guild.stickers.edit(this, data);
   }
 
   /**

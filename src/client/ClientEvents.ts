@@ -1,13 +1,20 @@
 import type { BaseInteraction } from '../interactions/BaseInteraction.js';
+import type { AutoModerationActionExecution, AutoModerationRule } from '../structures/AutoModeration.js';
 import type { Channel, TextBasedChannel } from '../structures/channels/index.js';
+import type { TextChannel } from '../structures/channels/TextChannel.js';
+import type { VoiceChannel } from '../structures/channels/VoiceChannel.js';
 import type { GuildEmoji, Sticker } from '../structures/Emoji.js';
 import type { Guild } from '../structures/Guild.js';
+import type { GuildAuditLogsEntry } from '../structures/GuildAuditLogs.js';
+import type { GuildBan } from '../structures/GuildBan.js';
 import type { GuildMember } from '../structures/GuildMember.js';
+import type { Invite } from '../structures/Invite.js';
 import type { Message } from '../structures/Message.js';
 import type { MessageReaction } from '../structures/MessageReaction.js';
 import type { PollAnswer } from '../structures/Poll.js';
 import type { Presence } from '../structures/Presence.js';
 import type { Role } from '../structures/Role.js';
+import type { SoundboardSound, VoiceChannelEffect } from '../structures/SoundboardSound.js';
 import type { Typing } from '../structures/Typing.js';
 import type { User } from '../structures/User.js';
 import type { VoiceState } from '../structures/VoiceState.js';
@@ -28,6 +35,10 @@ export interface MessageReactionEventDetails {
  * The events a {@link Client} emits and their arguments, with discord.js's names.
  */
 export interface ClientEvents {
+  autoModerationActionExecution: [autoModerationActionExecution: AutoModerationActionExecution];
+  autoModerationRuleCreate: [autoModerationRule: AutoModerationRule];
+  autoModerationRuleDelete: [autoModerationRule: AutoModerationRule];
+  autoModerationRuleUpdate: [oldAutoModerationRule: AutoModerationRule | null, newAutoModerationRule: AutoModerationRule];
   channelCreate: [channel: Channel];
   channelDelete: [channel: Channel];
   channelPinsUpdate: [channel: TextBasedChannel, date: Date];
@@ -40,6 +51,9 @@ export interface ClientEvents {
   emojiCreate: [emoji: GuildEmoji];
   emojiDelete: [emoji: GuildEmoji];
   emojiUpdate: [oldEmoji: GuildEmoji, newEmoji: GuildEmoji];
+  guildAuditLogEntryCreate: [auditLogEntry: GuildAuditLogsEntry, guild: Guild];
+  guildBanAdd: [ban: GuildBan];
+  guildBanRemove: [ban: GuildBan];
   guildCreate: [guild: Guild];
   guildDelete: [guild: Guild];
   guildUpdate: [oldGuild: Guild, newGuild: Guild];
@@ -56,6 +70,8 @@ export interface ClientEvents {
   stickerUpdate: [oldSticker: Sticker, newSticker: Sticker];
   interactionCreate: [interaction: BaseInteraction];
   invalidated: [];
+  inviteCreate: [invite: Invite];
+  inviteDelete: [invite: Invite];
   messageCreate: [message: Message];
   messageDelete: [message: Message];
   messageDeleteBulk: [messages: Collection<string, Message>, channel: TextBasedChannel];
@@ -63,6 +79,7 @@ export interface ClientEvents {
   messageReactionAdd: [reaction: MessageReaction, user: User, details: MessageReactionEventDetails];
   messageReactionRemove: [reaction: MessageReaction, user: User, details: MessageReactionEventDetails];
   messageReactionRemoveAll: [message: Message, reactions: Collection<string, MessageReaction>];
+  messageReactionRemoveEmoji: [reaction: MessageReaction];
   messagePollVoteAdd: [pollAnswer: PollAnswer | { id: number; poll: null; partial: true }, userId: string];
   messagePollVoteRemove: [pollAnswer: PollAnswer | { id: number; poll: null; partial: true }, userId: string];
   presenceUpdate: [oldPresence: Presence | null, newPresence: Presence];
@@ -74,6 +91,13 @@ export interface ClientEvents {
   shardResume: [shardId: number, replayedEvents: number];
   typingStart: [typing: Typing];
   userUpdate: [oldUser: User, newUser: User];
+  guildSoundboardSoundCreate: [soundboardSound: SoundboardSound];
+  guildSoundboardSoundUpdate: [oldSoundboardSound: SoundboardSound | null, newSoundboardSound: SoundboardSound];
+  guildSoundboardSoundDelete: [soundboardSound: SoundboardSound | { soundId: string; guildId: string }];
+  voiceChannelEffectSend: [voiceChannelEffect: VoiceChannelEffect];
   voiceServerUpdate: [data: VoiceServerUpdateData];
   voiceStateUpdate: [oldState: VoiceState, newState: VoiceState];
+  webhooksUpdate: [channel: TextChannel | VoiceChannel];
+  /** @deprecated Use `webhooksUpdate`. */
+  webhookUpdate: [channel: TextChannel | VoiceChannel];
 }

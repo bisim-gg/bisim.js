@@ -21,6 +21,7 @@ export const ErrorCodes = {
 
   InvalidIntents: 'InvalidIntents',
   DisallowedIntents: 'DisallowedIntents',
+  MissingIntent: 'MissingIntent',
 
   ColorRange: 'ColorRange',
   ColorConvert: 'ColorConvert',
@@ -73,6 +74,7 @@ export const ErrorCodes = {
 
   BanResolveId: 'BanResolveId',
   FetchBanResolveId: 'FetchBanResolveId',
+  BulkBanUsersOptionEmpty: 'BulkBanUsersOptionEmpty',
 
   GuildChannelResolve: 'GuildChannelResolve',
   GuildVoiceChannelResolve: 'GuildVoiceChannelResolve',
@@ -158,7 +160,11 @@ export const Messages: Record<ErrorCode, string | ((...args: any[]) => string)> 
   BitFieldInvalid: (bit: unknown) => `Invalid bitfield flag or number: ${String(bit)}.`,
 
   InvalidIntents: 'Invalid intent provided for WebSocket intents.',
-  DisallowedIntents: 'Privileged intent provided is not enabled or whitelisted.',
+  DisallowedIntents:
+    'Privileged intent provided is not enabled or whitelisted. Switch it on in the Developer Portal: bisim.gg/developers, ' +
+    'your app, Bot, Privileged Gateway Intents (from 100 servers on, Bisim must approve it too).',
+  MissingIntent: (action: string, intent: string) =>
+    `${action} needs the ${intent}. Switch it on in the Developer Portal: bisim.gg/developers, your app, Bot, Privileged Gateway Intents.`,
 
   ColorRange: 'Color must be within the range 0 - 16777215 (0xFFFFFF).',
   ColorConvert: (color: unknown) => `Unable to convert "${String(color)}" to a number.`,
@@ -211,6 +217,7 @@ export const Messages: Record<ErrorCode, string | ((...args: any[]) => string)> 
   MessageReferenceMissing: 'The message to reply to could not be found.',
 
   BanResolveId: (ban = false) => `Couldn't resolve the user id to ${ban ? 'ban' : 'unban'}.`,
+  BulkBanUsersOptionEmpty: 'Option "users" array or collection is empty',
   FetchBanResolveId: "Couldn't resolve the user id to fetch the ban.",
 
   GuildChannelResolve: 'Could not resolve channel to a guild channel.',

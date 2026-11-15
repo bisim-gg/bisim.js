@@ -2,8 +2,9 @@
 
 ## Members
 
-bisim.js loads every server's members when it connects, so `guild.members.cache` is full from
-`ClientReady` on. You can also fetch them:
+With the `GuildMembers` intent, bisim.js loads every server's members when it connects, so
+`guild.members.cache` is full from `ClientReady` on, and member events keep it current. Without it, the cache
+holds the bot and the members it has met, such as the authors of messages. You can also fetch them:
 
 ```js
 const member = await guild.members.fetch('123456789012345678');
@@ -11,6 +12,9 @@ const everyone = await guild.members.fetch();
 const found = await guild.members.search({ query: 'ali', limit: 10 });
 const me = guild.members.me; // the bot itself
 ```
+
+Fetching every member needs the Server Members intent switched on for the app in the Developer Portal;
+otherwise `guild.members.fetch()` rejects with `MissingIntent`. One member and a search work without it.
 
 A `GuildMember` has `user`, `nickname`, `displayName`, `joinedAt`, `roles`, `permissions`, `voice` and
 `presence`.
@@ -29,6 +33,47 @@ await guild.members.unban('123456789012345678');
 Bisim enforces the role hierarchy like Discord: the bot can act only on members below its highest role, and
 needs the matching permission. Check first with `member.kickable`, `bannable`, `moderatable` and
 `manageable`.
+
+To ban many at once (up to 200, with Ban Members and Manage Server):
+
+```js
+const { bannedUsers, failedUsers } = await guild.bans.bulkCreate(ids, { deleteMessageSeconds: 3600, reason: 'Raid' });
+```
+
+`failedUsers` lists those Bisim would not ban, such as the owner or someone above the bot. When nobody could
+be banned, Bisim answers with the error `BULK_BAN_FAILED`.
+
+Every `reason` reaches the server's audit log: bisim.js sends it in Discord's `X-Audit-Log-Reason` header,
+which Bisim reads on every route.
+
+## AutoMod
+
+With Manage Server a bot reads and writes the server's AutoMod rules, in discord.js's words:
+
+```js
+const { AutoModerationActionType, AutoModerationRuleEventType, AutoModerationRuleTriggerType } = require('bisim.js');
+
+const rule = await guild.autoModerationRules.create({
+  name: 'No invite links',
+  eventType: AutoModerationRuleEventType.MessageSend,
+  triggerType: AutoModerationRuleTriggerType.Keyword,
+  triggerMetadata: { keywordFilter: ['*discord.gg*', '*bisim.gg/*'] },
+  actions: [
+    { type: AutoModerationActionType.BlockMessage, metadata: { customMessage: 'No invites here.' } },
+    { type: AutoModerationActionType.SendAlertMessage, metadata: { channel: modLog } },
+  ],
+  exemptRoles: [moderators],
+});
+
+await rule.setEnabled(false);
+const rules = await guild.autoModerationRules.fetch();
+await rule.delete();
+```
+
+The triggers are `Keyword`, `KeywordPreset` (Bisim's word lists, `Profanity`, `SexualContent` and `Slurs`),
+`Spam`, `MentionSpam` and `MemberProfile` (names and nicknames, with the `MemberUpdate` event type). The
+actions are `BlockMessage`, `SendAlertMessage` and `Timeout`. A rule keeps its trigger and its event type
+once made; mention raid protection and `BlockMemberInteraction` are not on Bisim and throw.
 
 ## Roles
 

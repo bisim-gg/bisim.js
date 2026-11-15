@@ -133,14 +133,34 @@ export class StringSelectMenuComponent extends BaseSelectMenuComponent {
 export const SelectMenuComponent = StringSelectMenuComponent;
 
 /** A select menu of members. */
-export class UserSelectMenuComponent extends BaseSelectMenuComponent {}
+export class UserSelectMenuComponent extends BaseSelectMenuComponent {
+  /** The members the menu shows as picked. */
+  public get defaultValues(): NonNullable<RawComponentData['defaultValues']> {
+    return this.data.defaultValues ?? [];
+  }
+}
 /** A select menu of roles. */
-export class RoleSelectMenuComponent extends BaseSelectMenuComponent {}
+export class RoleSelectMenuComponent extends BaseSelectMenuComponent {
+  /** The roles the menu shows as picked. */
+  public get defaultValues(): NonNullable<RawComponentData['defaultValues']> {
+    return this.data.defaultValues ?? [];
+  }
+}
 /** A select menu of users and roles. */
-export class MentionableSelectMenuComponent extends BaseSelectMenuComponent {}
+export class MentionableSelectMenuComponent extends BaseSelectMenuComponent {
+  /** The users and roles the menu shows as picked. */
+  public get defaultValues(): NonNullable<RawComponentData['defaultValues']> {
+    return this.data.defaultValues ?? [];
+  }
+}
 
 /** A select menu of channels. */
 export class ChannelSelectMenuComponent extends BaseSelectMenuComponent {
+  /** The channels the menu shows as picked. */
+  public get defaultValues(): NonNullable<RawComponentData['defaultValues']> {
+    return this.data.defaultValues ?? [];
+  }
+
   /** The channel types the menu shows. */
   public get channelTypes(): ChannelType[] | null {
     return this.data.channelTypes?.map((type) => channelTypeFromBisim(type)) ?? null;

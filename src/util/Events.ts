@@ -1,7 +1,10 @@
 /**
  * The names of the events a {@link Client} emits, with discord.js's names, so
- * `client.on(Events.MessageCreate, ...)` works unchanged. Events Bisim has no source for (threads, stages,
- * scheduled events, entitlements...) are listed so code that mentions them compiles; they never fire.
+ * `client.on(Events.MessageCreate, ...)` works unchanged. Which ones arrive depends on the client's intents,
+ * as on Discord. A few are listed only so code that mentions them compiles, and never fire:
+ * `ApplicationCommandPermissionsUpdate`, `CacheSweep`, `GuildAvailable`, `GuildUnavailable`,
+ * `GuildIntegrationsUpdate`, `GuildMembersChunk`, and the entitlement, scheduled event, stage instance and
+ * thread events.
  */
 export const Events = {
   ApplicationCommandPermissionsUpdate: 'applicationCommandPermissionsUpdate',
@@ -87,6 +90,7 @@ export const Events = {
   ThreadUpdate: 'threadUpdate',
   TypingStart: 'typingStart',
   UserUpdate: 'userUpdate',
+  VoiceChannelEffectSend: 'voiceChannelEffectSend',
   VoiceServerUpdate: 'voiceServerUpdate',
   VoiceStateUpdate: 'voiceStateUpdate',
   Warn: 'warn',

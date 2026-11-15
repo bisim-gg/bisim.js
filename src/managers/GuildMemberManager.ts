@@ -1,4 +1,5 @@
 import { BisimjsError, ErrorCodes } from '../errors/index.js';
+import { BisimAPIError } from '../rest/errors.js';
 import { isRouteMissing } from '../rest/missing.js';
 import { Routes } from '../rest/Routes.js';
 import type { VoiceChannel } from '../structures/channels/VoiceChannel.js';
@@ -141,7 +142,8 @@ export class GuildMemberManager extends CachedManager<string, GuildMember, Guild
   }
 
   /**
-   * Fetches one member, several, a search, or all of them.
+   * Fetches one member, several, a search, or all of them. All of them needs the Server Members intent
+   * switched on for the app in the Developer Portal; without it the promise rejects with `MissingIntent`.
    *
    * @param options - A user, or what to fetch
    * @example
@@ -202,9 +204,7 @@ export class GuildMemberManager extends CachedManager<string, GuildMember, Guild
     const members = new Collection<string, GuildMember>();
     let after: string | undefined;
     for (;;) {
-      const page = (await this.client.rest.get(Routes.guildMembers(this.guild.id), {
-        query: { limit: PAGE_SIZE, after },
-      })) as RawMemberData[];
+      const page = await this.fetchPage(PAGE_SIZE, after);
       let added = 0;
       for (const raw of page) {
         const member = this._add(raw, cache);
@@ -216,6 +216,21 @@ export class GuildMemberManager extends CachedManager<string, GuildMember, Guild
     }
     if (cache && !this.guild._memberCountKnown) this.guild.memberCount = Math.max(this.guild.memberCount, members.size);
     return members;
+  }
+
+  /**
+   * One page of the member list. Bisim gives the list only to a bot whose app has the Server Members intent
+   * switched on, and answers 403 `MISSING_INTENT` otherwise: that becomes a `MissingIntent` error saying so.
+   */
+  private async fetchPage(limit: number, after: string | undefined): Promise<RawMemberData[]> {
+    try {
+      return (await this.client.rest.get(Routes.guildMembers(this.guild.id), { query: { limit, after } })) as RawMemberData[];
+    } catch (error) {
+      if (error instanceof BisimAPIError && error.code === 'MISSING_INTENT') {
+        throw new BisimjsError(ErrorCodes.MissingIntent, "Listing a server's members", 'Server Members Intent');
+      }
+      throw error;
+    }
   }
 
   /**
@@ -262,9 +277,7 @@ export class GuildMemberManager extends CachedManager<string, GuildMember, Guild
    * @param options - How many and after whom
    */
   public async list(options: { limit?: number; after?: string; cache?: boolean } = {}): Promise<Collection<string, GuildMember>> {
-    const data = (await this.client.rest.get(Routes.guildMembers(this.guild.id), {
-      query: { limit: options.limit ?? 1, after: options.after },
-    })) as RawMemberData[];
+    const data = await this.fetchPage(options.limit ?? 1, options.after);
     const members = new Collection<string, GuildMember>();
     for (const raw of data.slice(0, options.limit ?? 1)) {
       const member = this._add(raw, options.cache ?? true);

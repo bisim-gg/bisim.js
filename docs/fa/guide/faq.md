@@ -8,6 +8,15 @@ client.user.setActivity('the server', { type: ActivityType.Watching });
 client.user.setStatus('dnd');
 ```
 
+## تصویر ربات را چطور عوض کنم؟
+
+```js
+await client.user.setAvatar('./avatar.png'); // a path, a URL, a Buffer or a data: URI
+await client.user.setBanner(null); // removes the banner
+```
+
+نام ربات همان نام برنامهٔ آن است: آن را در پورتال توسعه‌دهندگان، یا با `client.user.setUsername()` عوض کنید.
+
 ## چطور به یک کانال مشخص پیام بفرستم؟
 
 ```js
@@ -36,9 +45,19 @@ await member.send('Hello!');
 const url = user.displayAvatarURL({ size: 256 });
 ```
 
-## چرا به اینتنت Message Content نیازی ندارم؟
+## چرا `message.content` خالی است؟
 
-بی‌سیم اینتنت ندارد. ربات محتوای همهٔ پیام‌ها را در کانال‌هایی که می‌تواند بخواند می‌بیند.
+ربات اینتنت Message Content را ندارد. بدون آن، پیام با متن خالی و بدون امبد، فایل، کامپوننت و نظرسنجی می‌رسد؛
+مگر پیام‌های خود ربات، پیام‌هایی که به آن اشاره می‌کنند، و پیام‌های خصوصی. `GatewayIntentBits.MessageContent` را
+به اینتنت‌های کلاینت اضافه کنید و آن را در پرتال توسعه‌دهندگان روشن کنید
+([bisim.gg/developers](https://bisim.gg/developers)، برنامهٔ شما، **Bot**، **Privileged Gateway Intents**).
+دستورهای اسلش به اینتنتی نیاز ندارند.
+
+## چرا `login()` با `DisallowedIntents` رد می‌شود؟
+
+کلاینت یک اینتنت ویژه (`GuildMembers`، `GuildPresences` یا `MessageContent`) می‌خواهد که برای برنامه روشن نیست.
+آن را در پرتال توسعه‌دهندگان روشن کنید یا از اینتنت‌ها بردارید. از ۱۰۰ سرور به بالا، بی‌سیم هم باید آن را تأیید
+کند.
 
 ## ربات یک کانال را نمی‌بیند. چرا؟
 
@@ -55,7 +74,7 @@ const url = user.displayAvatarURL({ size: 256 });
 ## «برنامه پاسخ نداد»
 
 ربات باید ظرف سه ثانیه به تعامل پاسخ دهد. اگر کار بیشتر طول می‌کشد، اول `deferReply()` را صدا بزنید و وقتی کار
-تمام شد `editReply()` را.
+تمام شد `editReply()` (یا `followUp()`) را.
 
 ## چطور بفهمم کدام امکانات نیست؟
 
@@ -97,7 +116,7 @@ try {
 بله. کلاینت را با `rest.api` و `ws.gateway` به آن وصل کنید:
 
 ```js
-new Client({ intents: [], rest: { api: 'http://localhost:3000/api' }, ws: { gateway: 'ws://localhost:4000/ws' } });
+new Client({ intents: [GatewayIntentBits.Guilds], rest: { api: 'http://localhost:3000/api' }, ws: { gateway: 'ws://localhost:4000/ws' } });
 ```
 
 ## مرجع کامل API کجاست؟

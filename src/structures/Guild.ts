@@ -5,6 +5,8 @@ import { GuildApplicationCommandManager } from '../managers/ApplicationCommandMa
 import { GuildBanManager } from '../managers/GuildBanManager.js';
 import { GuildChannelManager } from '../managers/GuildChannelManager.js';
 import { GuildEmojiManager, GuildStickerManager } from '../managers/GuildExpressionManagers.js';
+import { AutoModerationRuleManager } from '../managers/AutoModerationRuleManager.js';
+import { GuildSoundboardSoundManager } from '../managers/GuildSoundboardSoundManager.js';
 import { GuildInviteManager } from '../managers/GuildInviteManager.js';
 import { GuildMemberManager } from '../managers/GuildMemberManager.js';
 import { RoleManager } from '../managers/RoleManager.js';
@@ -25,7 +27,7 @@ import { cdnURL, notSupported } from '../util/Util.js';
 import { Base } from './Base.js';
 import type { TextChannel } from './channels/TextChannel.js';
 import type { VoiceChannel } from './channels/VoiceChannel.js';
-import { GuildAuditLogs, type RawAuditLogEntry } from './GuildAuditLogs.js';
+import { auditActionOf, GuildAuditLogs, type RawAuditLogEntry } from './GuildAuditLogs.js';
 import type { GuildMember } from './GuildMember.js';
 import type { ImageURLOptions } from './User.js';
 import { Webhook } from './Webhook.js';
@@ -62,7 +64,7 @@ export interface GuildAuditLogsFetchOptions {
   before?: string | { id: string };
   /** How many entries to keep (Bisim answers a page; extras are cut). */
   limit?: number;
-  /** Only entries of this Bisim action, for example `CHANNEL_CREATE`. */
+  /** Only entries of this action: an `AuditLogEvent` or Bisim's name, for example `CHANNEL_CREATE`. */
   type?: string | number | null;
   /** Only entries made by this user. */
   user?: string | { id: string };
@@ -161,6 +163,10 @@ export class Guild extends Base {
   public readonly emojis: GuildEmojiManager = new GuildEmojiManager(this);
   /** The stickers. */
   public readonly stickers: GuildStickerManager = new GuildStickerManager(this);
+  /** The soundboard sounds (cached from events and `fetch()`). */
+  public readonly soundboardSounds: GuildSoundboardSoundManager = new GuildSoundboardSoundManager(this);
+  /** The AutoMod rules (needs Manage Server; cached from these methods and the AutoMod events). */
+  public readonly autoModerationRules: AutoModerationRuleManager = new AutoModerationRuleManager(this);
   /** The members' presences. */
   public readonly presences: PresenceManager = new PresenceManager(this.client);
   /** Who is in voice. */
@@ -404,11 +410,6 @@ export class Guild extends Base {
     return notSupported('Stage channels');
   }
 
-  /** Not on Bisim through the API. */
-  public get autoModerationRules(): never {
-    return notSupported('AutoMod rules through bisim.js');
-  }
-
   /**
    * The URL of the server's icon, or `null`.
    *
@@ -564,7 +565,10 @@ export class Guild extends Base {
     const before = typeof options.before === 'string' ? options.before : options.before?.id;
     const data = (await this.client.rest.get(Routes.guildAuditLog(this.id), { query: { before } })) as RawAuditLogEntry[];
     let entries = data;
-    if (options.type !== undefined && options.type !== null) entries = entries.filter((entry) => String(entry.action) === String(options.type));
+    if (options.type !== undefined && options.type !== null) {
+      const wanted = String(options.type);
+      entries = entries.filter((entry) => entry.action === wanted || String(auditActionOf(entry.action, entry.meta)) === wanted);
+    }
     const userId = typeof options.user === 'string' ? options.user : options.user?.id;
     if (userId) entries = entries.filter((entry) => entry.actorId === userId);
     if (options.limit) entries = entries.slice(0, options.limit);

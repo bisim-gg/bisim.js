@@ -6,6 +6,8 @@ All notable changes to bisim.js are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-15
+
 ### Added
 
 - Gateway intents work as on Discord: the client sends `intents` when it connects and Bisim delivers only the

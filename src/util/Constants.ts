@@ -1,7 +1,7 @@
 /**
  * The version of bisim.js.
  */
-export const version = '0.2.0';
+export const version = '0.3.0';
 
 /**
  * Where bisim.js talks to by default. Every one of these can be changed in the client options

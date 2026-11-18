@@ -10,6 +10,9 @@ import { CachedManager } from './BaseManager.js';
 import type { UserResolvable } from './UserManager.js';
 import { attachHidden } from '../util/internal.js';
 
+/** The most bans one page of Bisim's ban list holds (Discord's limit). */
+const BANS_PAGE_SIZE = 1000;
+
 /**
  * Options for banning.
  */
@@ -75,7 +78,8 @@ export class GuildBanManager extends CachedManager<string, GuildBan, UserResolva
   }
 
   /**
-   * Fetches one ban by user, or every ban of the server.
+   * Fetches one ban by user, or the bans of the server: every one of them, or with `limit`, `before` or `after` one
+   * page (at most 1000, ordered by user id).
    *
    * @param options - A user, or options
    */
@@ -107,10 +111,31 @@ export class GuildBanManager extends CachedManager<string, GuildBan, UserResolva
         return found;
       }
     }
-    const data = (await this.client.rest.get(Routes.guildBans(this.guild.id))) as RawBanData[];
+    const { limit, before, after } = (options ?? {}) as { limit?: number; before?: string; after?: string };
     const bans = new Collection<string, GuildBan>();
-    for (const raw of data) bans.set(raw.userId, this._add(raw, cache));
+    if (limit !== undefined || before !== undefined || after !== undefined) {
+      // One page, as discord.js asks for it: Bisim orders it by user id, ascending.
+      for (const raw of await this.fetchPage({ limit, before, after })) bans.set(raw.userId, this._add(raw, cache));
+      return bans;
+    }
+    // Every ban: a page at a time in user id order, each after the last id of the one before, until a short page.
+    let from = '0';
+    for (;;) {
+      const page = await this.fetchPage({ limit: BANS_PAGE_SIZE, after: from });
+      let added = 0;
+      for (const raw of page) {
+        if (!bans.has(raw.userId)) added++;
+        bans.set(raw.userId, this._add(raw, cache));
+      }
+      if (page.length !== BANS_PAGE_SIZE || added === 0) break;
+      from = page[page.length - 1]!.userId;
+    }
     return bans;
+  }
+
+  /** One page of the ban list. */
+  private async fetchPage(query: { limit?: number; before?: string; after?: string }): Promise<RawBanData[]> {
+    return ((await this.client.rest.get(Routes.guildBans(this.guild.id), { query })) as RawBanData[] | null) ?? [];
   }
 
   /**
